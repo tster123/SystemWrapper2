@@ -154,15 +154,39 @@ internal class SingleClassSourceGenerator
             if (method.ReturnType != typeof(void))
             {
                 retFormat = "return {0}";
-                if (retType.IsWrapped)
-                {
-                    retFormat = $"return new {retType.UseType(forceClass: true)}({{0}})";
-                }
             }
-            string formattedCall = string.Format(retFormat, $"inner.{method.Name}({argList})");
+
+            string rValue = ConvertRValueToWrapped($"inner.{method.Name}({argList})", retType);
+            string formattedCall = string.Format(retFormat, rValue);
             classStr.AppendLine($"\t\t{formattedCall};");
             classStr.AppendLine("\t}");
         }
+    }
+
+    private string ConvertRValueToWrapped(string rValue, StandardizedType type)
+    {
+        if (type.Original == typeof(void)) return rValue;
+        if (type.IsWrapped)
+        {
+            if (type.IsArray)
+            {
+                StandardizedType itemType = GetStandardizedType(type.Original.GetElementType()!);
+                return $"{rValue}.Select(e => new {itemType.UseType(forceClass: true)}(e)).ToArray()";
+            }
+            return $"new {type.UseType(forceClass: true)}({rValue})";
+        }
+
+        Type[] paramTypes = type.Original.GetGenericArguments();
+        if (type.Name.StartsWith("IEnumerable"))
+        {
+            StandardizedType iEnumType = GetStandardizedType(paramTypes[0]);
+            if (iEnumType.IsWrapped)
+            {
+                return $"{rValue}.Select(e => new {iEnumType.UseType(forceClass: true)}(e))";
+            }
+        }
+
+        return rValue;
     }
 
     private static bool IsFromTypes(MethodInfo method, Type[] types)
@@ -248,7 +272,9 @@ internal class SingleClassSourceGenerator
     private StandardizedType GetStandardizedType(Type type)
     {
         if (StandardizedType.Common.TryGetValue(type, out StandardizedType r)) return r;
-        ClassToWrap? wrap = registrar.GetWrap(type);
+        Type eType = type;
+        if (type.IsArray) eType = type.GetElementType();
+        ClassToWrap? wrap = registrar.GetWrap(eType);
 
         StandardizedType[]? parameterized;
         string cName;
@@ -273,72 +299,6 @@ internal class SingleClassSourceGenerator
             iName = wrap == null ? null : wrap.InterfaceNameToGenerate.Split('`').First();
         }
 
-        return new StandardizedType(type, ns, cName, iName, parameterized, wrap != null);
+        return new StandardizedType(type, ns, cName, iName, parameterized, wrap != null, type.IsArray);
     }
 }
-
-internal record StandardizedType
-{
-    public StandardizedType(
-        Type original,
-        string? namespaceName,
-        string name,
-        string? interfaceName,
-        StandardizedType[]? parameterizedTypes,
-        bool isWrapped = false)
-    {
-        Original           = original;
-        Namespace          = namespaceName;
-        Name               = name;
-        Interface          = interfaceName;
-        ParameterizedTypes = parameterizedTypes;
-        IsWrapped          = isWrapped;
-    }
-
-    public Type Original { get; }
-    public string? Namespace { get; }
-    public string Name { get; }
-    public string? Interface { get; }
-    public StandardizedType[]? ParameterizedTypes { get; }
-    public bool IsWrapped { get; }
-
-    public string UseType(bool useInner = false, bool forceClass = false)
-    {
-        string? iface = forceClass ? null : Interface;
-        string name = useInner ? Original.Name.Split('`').First() : iface ?? Name;
-        if (ParameterizedTypes != null)
-        {
-            name += "<";
-            name += string.Join(", ", ParameterizedTypes.Select(pt => pt.UseType(useInner)));
-            name += ">";
-        }
-
-        return name;
-    }
-
-    public static Dictionary<Type, StandardizedType> Common = new()
-    {
-        [typeof(void)]   = new StandardizedType(typeof(void), null, "void", null, null),
-        [typeof(int)]    = new StandardizedType(typeof(int), null, "int", null, null),
-        [typeof(long)]   = new StandardizedType(typeof(long), null, "long", null, null),
-        [typeof(short)]  = new StandardizedType(typeof(short), null, "short", null, null),
-        [typeof(double)] = new StandardizedType(typeof(double), null, "double", null, null),
-        [typeof(float)]  = new StandardizedType(typeof(float), null, "float", null, null),
-        [typeof(string)] = new StandardizedType(typeof(string), null, "string", null, null),
-        [typeof(byte)]   = new StandardizedType(typeof(byte), null, "byte", null, null),
-        [typeof(bool)]   = new StandardizedType(typeof(bool), null, "bool", null, null),
-        [typeof(ushort)] = new StandardizedType(typeof(ushort), null, "ushort", null, null),
-        [typeof(uint)]   = new StandardizedType(typeof(uint), null, "uint", null, null),
-        [typeof(ulong)]  = new StandardizedType(typeof(ulong), null, "ulong", null, null),
-    };
-
-    public void Deconstruct(out Type Original, out string? Namespace, out string Name, out string? Interface, out StandardizedType[]? ParameterizedTypes)
-    {
-        Original           = this.Original;
-        Namespace          = this.Namespace;
-        Name               = this.Name;
-        Interface          = this.Interface;
-        ParameterizedTypes = this.ParameterizedTypes;
-    }
-}
-

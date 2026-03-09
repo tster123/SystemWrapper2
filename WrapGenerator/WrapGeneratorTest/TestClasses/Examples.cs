@@ -5,21 +5,21 @@ using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
 
 namespace WrapGeneratorTest.TestClasses;
 
+public class WrappingExample
+{
+    public PropertyExample Prop { get; set; }
+
+    public PropertyExample[] MakeProperties(PropertyExample[] props)
+    {
+        return new PropertyExample[0];
+    }
+}
+
 public class ArraySegmentExample
 {
     public void Foo(out ArraySegment<byte> foo)
     {
         foo = new ArraySegment<byte>();
-    }
-}
-
-public class WrappingExample
-{
-    public PropertyExample Prop { get; set; }
-
-    public PropertyExample MakeProperty(PropertyExample p1)
-    {
-        return new PropertyExample();
     }
 }
 
