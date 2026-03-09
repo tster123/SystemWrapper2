@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace WrapGenerator;
 
@@ -42,6 +43,11 @@ internal class GenRegistrar
 
     private void LoadAssembly(WrapNamespace nsWrap, Assembly a)
     {
+        Regex? exclude = null;
+        if (nsWrap.ExcludeFilter != null)
+        {
+            exclude = new Regex(nsWrap.ExcludeFilter);
+        }
         foreach (Type t in a.GetTypes())
         {
             if (t.IsNotPublic) continue;
@@ -49,8 +55,10 @@ internal class GenRegistrar
             if (t.IsNested) continue;
             // static classes
             if (t.IsAbstract && t.IsSealed) continue; // TODO: support static classes?
+            if (typeof(Exception).IsAssignableFrom(t)) continue;
             if (t.Namespace == nsWrap.Namespace)
             {
+                if (exclude != null && exclude.IsMatch(t.Name)) continue;
                 ClassToWrap wrap = new(t, nsWrap);
                 Register(wrap);
             }

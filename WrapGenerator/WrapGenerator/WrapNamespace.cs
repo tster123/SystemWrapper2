@@ -5,6 +5,7 @@ internal class WrapNamespace
     public string TargetNamespaceFormat { get; set; } = "{0}";
     public string WrapperClassNameFormat { get; set; } = "{0}Wrap";
     public string? Namespace { get; set; }
+    public string? ExcludeFilter { get; set; }
 
     public override string ToString()
     {

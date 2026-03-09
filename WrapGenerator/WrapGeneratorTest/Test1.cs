@@ -105,4 +105,22 @@ public sealed class Test1
     {
         DoTest("InterfaceExample");
     }
+
+    [TestMethod]
+    public void DisposableTest()
+    {
+        DoTest("DisposableExample");
+    }
+
+    [TestMethod]
+    public void WrappingTest()
+    {
+        DoTest("WrappingExample");
+    }
+
+    [TestMethod]
+    public void ArraySegmentTest()
+    {
+        DoTest("ArraySegmentExample");
+    }
 }

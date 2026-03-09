@@ -57,10 +57,12 @@ public class SourceGenerator : ISourceGenerator
             {
                 string ns = nsElem.Attribute("Namespace").Value;
                 string targetNsFormat = nsElem.Attribute("TargetNamespaceFormat").Value;
+                string? excludeFilter = nsElem.Attribute("Exclude")?.Value;
                 registrar.Register(new WrapNamespace
                 {
                     Namespace = ns,
-                    TargetNamespaceFormat = targetNsFormat
+                    TargetNamespaceFormat = targetNsFormat,
+                    ExcludeFilter = excludeFilter
                 });
             }
         }

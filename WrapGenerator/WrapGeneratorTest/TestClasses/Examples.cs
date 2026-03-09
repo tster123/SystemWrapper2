@@ -1,8 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
 
 namespace WrapGeneratorTest.TestClasses;
+
+public class ArraySegmentExample
+{
+    public void Foo(out ArraySegment<byte> foo)
+    {
+        foo = new ArraySegment<byte>();
+    }
+}
+
+public class WrappingExample
+{
+    public PropertyExample Prop { get; set; }
+
+    public PropertyExample MakeProperty(PropertyExample p1)
+    {
+        return new PropertyExample();
+    }
+}
+
+public class DisposableExample : IDisposable
+{
+    public void Dispose()
+    {
+    }
+}
 
 public class PropertyExample
 {
