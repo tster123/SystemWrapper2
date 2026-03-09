@@ -123,4 +123,10 @@ public sealed class Test1
     {
         DoTest("ArraySegmentExample");
     }
+
+    [TestMethod]
+    public void OutTest()
+    {
+        DoTest("OutExample");
+    }
 }

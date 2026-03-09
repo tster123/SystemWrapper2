@@ -5,6 +5,15 @@ using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
 
 namespace WrapGeneratorTest.TestClasses;
 
+public class OutExample
+{
+    public void Mork(out int a, out PropertyExample p)
+    {
+        a = 1;
+        p = new PropertyExample();
+    }
+}
+
 public class WrappingExample
 {
     public PropertyExample Prop { get; set; }

@@ -6,6 +6,7 @@ using System.Text;
 
 namespace WrapGenerator;
 
+//TODO - provide option to wrap static classes like Path and File.
 internal class SingleClassSourceGenerator
 {
     private readonly ISourceGeneratorContext context;
@@ -138,14 +139,10 @@ internal class SingleClassSourceGenerator
                 }
                 interStr.Append($"{paramTypeStr} {param.Name}");
                 classStr.Append($"{paramTypeStr} {param.Name}"); // TODO: support default values
-                if (paramType.IsWrapped)
-                {
-                    argList.Append(param.Name + ".WrappedInstance");
-                }
-                else
-                {
-                    argList.Append(param.Name);
-                }
+                //TODO handle out parameters that are wrapped.
+                if (param.IsOut) argList.Append("out ");
+                argList.Append(param.Name);
+                if (paramType.IsWrapped) argList.Append(".WrappedInstance");
             }
 
             interStr.AppendLine(");");

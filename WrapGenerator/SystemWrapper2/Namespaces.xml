@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Generate>
 	<Namespace Namespace="System.IO" TargetNamespaceFormat="Wrapped.System.IO"
-			   Exclude="Unmanaged.*"/>
+			   Exclude="Unmanaged.*|BufferedStream|.*Options.*"/>
 </Generate>
