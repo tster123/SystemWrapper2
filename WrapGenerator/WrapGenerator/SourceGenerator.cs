@@ -69,7 +69,7 @@ public class SourceGenerator : ISourceGenerator
         
         foreach (ClassToWrap wrap in registrar.AllClassesToWrap)
         {
-            SingleClassSourceGenerator generator = new(context, registrar, wrap);
+            SingleClassSourceGenerator generator = new(registrar, wrap);
             string code = generator.GeneratorSource();
             context.AddSource(wrap.TargetNamespace.Replace('.', '/') + "/" + wrap.ClassNameToGenerate + ".cs", code);
         }

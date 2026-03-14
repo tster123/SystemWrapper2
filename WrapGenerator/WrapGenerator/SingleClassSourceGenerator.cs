@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -9,22 +10,14 @@ namespace WrapGenerator;
 //TODO - provide option to wrap static classes like Path and File.
 internal class SingleClassSourceGenerator
 {
-    private readonly ISourceGeneratorContext context;
     private readonly GenRegistrar registrar;
-    private int _test;
     private ClassToWrap wrap;
     private readonly HashSet<string> usings = new();
     private readonly StringBuilder interfaceStr = new();
     private readonly StringBuilder classStr = new();
 
-    private int Test
+    public SingleClassSourceGenerator(GenRegistrar registrar, ClassToWrap wrap)
     {
-        get => _test;
-        set => _test = value;
-    }
-    public SingleClassSourceGenerator(ISourceGeneratorContext context, GenRegistrar registrar, ClassToWrap wrap)
-    {
-        this.context = context;
         this.registrar = registrar;
         this.wrap = wrap;
     }
@@ -51,14 +44,14 @@ internal class SingleClassSourceGenerator
         interfaceStr.AppendLine($"\t{innerType.UseType(true)} WrappedInstance {{ get; }}");
 
         classStr.Append(@$"public class {wrap.ClassNameToGenerate}{topLevelGenerics} : {wrap.InterfaceNameToGenerate}{topLevelGenerics} {{
-    private readonly {innerType.UseType(true)} inner;
-    public {innerType.UseType(true)} WrappedInstance => inner;
-    public {wrap.ClassNameToGenerate}({innerType.UseType(true)} inner) {{
-        this.inner = inner;
-    }}
+	private readonly {innerType.UseType(true)} inner;
+	public {innerType.UseType(true)} WrappedInstance => inner;
 ");
-        // TODO: add constructors that match the original type's constructors and build inner.
+
+        GenerateConstructors(innerType);
+        classStr.AppendLine();
         GenerateProperties();
+        classStr.AppendLine();
         GenerateMethods(implementedInterfaces);
         StringBuilder s = new();
         foreach (string u in usings)
@@ -76,7 +69,41 @@ internal class SingleClassSourceGenerator
         return s.ToString();
     }
 
-    private static List<MethodInfo> methodsToSkip =
+    private void GenerateConstructors(StandardizedType innerType)
+    {
+        // add the wrap constructor.  all other constructors will call this
+        string innerTypeStr = innerType.UseType(true);
+        classStr.AppendLine($@"	public {wrap.ClassNameToGenerate}({innerTypeStr} inner) {{
+		this.inner = inner;
+	}}");
+
+        ConstructorInfo[] ctors = wrap.Type.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+        foreach (ConstructorInfo ctor in ctors)
+        {
+            ParameterInfo[] parameters = ctor.GetParameters();
+            classStr.Append($"\tpublic {wrap.ClassNameToGenerate}(");
+            bool first = true;
+            StringBuilder argList = new();
+            foreach (ParameterInfo param in parameters)
+            {
+                (string declaration, string arg) = BuildParameterDeclarationAndArgumentRValue(param);
+                if (!first)
+                {
+                    classStr.Append(", ");
+                    argList.Append(", ");
+                }
+                first = false;
+                classStr.Append(declaration);
+                argList.Append(arg);
+            }
+            classStr.AppendLine(")");
+            
+            // call this(<wrapper class>)
+            classStr.AppendLine($"\t\t: this(new {innerTypeStr}({argList})) {{ }}");
+        }
+    }
+
+    private static readonly List<MethodInfo> methodsToSkip =
     [
         typeof(object).GetMethod("GetType")
     ];
@@ -116,13 +143,7 @@ internal class SingleClassSourceGenerator
             StringBuilder argList = new();
             foreach (ParameterInfo param in method.GetParameters())
             {
-                Type paramT = param.ParameterType;
-                if (paramT.IsByRef)
-                {
-                    paramT = paramT.GetElementType()!;
-                }
-                StandardizedType paramType = GetStandardizedType(paramT);
-                AddUsing(paramType);
+                (string declaration, string arg) = BuildParameterDeclarationAndArgumentRValue(param);
                 if (!first)
                 {
                     interStr.Append(", ");
@@ -130,19 +151,9 @@ internal class SingleClassSourceGenerator
                     argList.Append(", ");
                 }
                 first = false;
-                string paramTypeStr = paramType.UseType();
-                if (param.IsOut)
-                {
-                    interStr.Append("out ");
-                    classStr.Append("out ");
-                    paramTypeStr = paramTypeStr.Replace("&", "");
-                }
-                interStr.Append($"{paramTypeStr} {param.Name}");
-                classStr.Append($"{paramTypeStr} {param.Name}"); // TODO: support default values
-                //TODO handle out parameters that are wrapped.
-                if (param.IsOut) argList.Append("out ");
-                argList.Append(param.Name);
-                if (paramType.IsWrapped) argList.Append(".WrappedInstance");
+                interStr.Append(declaration);
+                classStr.Append(declaration);
+                argList.Append(arg);
             }
 
             interStr.AppendLine(");");
@@ -158,6 +169,32 @@ internal class SingleClassSourceGenerator
             classStr.AppendLine($"\t\t{formattedCall};");
             classStr.AppendLine("\t}");
         }
+    }
+
+    private (string, string) BuildParameterDeclarationAndArgumentRValue(ParameterInfo param)
+    {
+        Type paramT = param.ParameterType;
+        if (paramT.IsByRef)
+        {
+            paramT = paramT.GetElementType()!;
+        }
+        StandardizedType paramType = GetStandardizedType(paramT);
+        AddUsing(paramType);
+        string paramTypeStr = paramType.UseType();
+        string declaration = "";
+        if (param.IsOut)
+        {
+            declaration = "out ";
+            paramTypeStr = paramTypeStr.Replace("&", "");
+        }
+        declaration += $"{paramTypeStr} {param.Name}";
+        
+        //TODO handle out parameters that are wrapped.
+        string arg = "";
+        if (param.IsOut) arg = "out ";
+        arg += param.Name;
+        if (paramType.IsWrapped) arg += ".WrappedInstance";
+        return (declaration, arg);
     }
 
     private string ConvertRValueToWrapped(string rValue, StandardizedType type)
@@ -217,8 +254,8 @@ internal class SingleClassSourceGenerator
 
     private string GenerateMethodGenericParamString(MethodInfo method)
     {
-        Type[]? genericArgs = method.GetGenericArguments();
-        if (genericArgs == null || genericArgs.Length == 0) return "";
+        Type[] genericArgs = method.GetGenericArguments();
+        if (genericArgs.Length == 0) return "";
         return $"<{string.Join(", ", genericArgs.Select(a => a.Name))}>";
     }
 
@@ -270,32 +307,39 @@ internal class SingleClassSourceGenerator
     {
         if (StandardizedType.Common.TryGetValue(type, out StandardizedType r)) return r;
         Type eType = type;
-        if (type.IsArray) eType = type.GetElementType();
-        ClassToWrap? wrap = registrar.GetWrap(eType);
+        if (type.IsArray)
+        {
+            Type? e = type.GetElementType();
+            Debug.Assert(e != null);
+            eType = e!;
+        }
+        ClassToWrap? eWrap = registrar.GetWrap(eType);
 
         StandardizedType[]? parameterized;
         string cName;
         string? iName;
-        string ns = wrap == null ? type.Namespace : wrap.TargetNamespace;
-        Type[]? generics = type.GenericTypeArguments;
-        if (generics == null || generics.Length == 0 && type.IsGenericType)
+        string? ns = type.Namespace;
+        if (eWrap != null) ns = eWrap.TargetNamespace;
+
+        Type[] generics = type.GenericTypeArguments;
+        if (generics.Length == 0 && type.IsGenericType)
         {
             var t1 = type.GetGenericTypeDefinition();
             generics = t1.GetGenericArguments();
         }
-        if (generics == null || generics.Length == 0)
+        if (generics.Length == 0)
         {
             parameterized = null;
-            cName = wrap == null ? type.Name : wrap.ClassNameToGenerate;
-            iName = wrap == null ? null : wrap.InterfaceNameToGenerate;
+            cName = eWrap == null ? type.Name : eWrap.ClassNameToGenerate;
+            iName = eWrap == null ? null : eWrap.InterfaceNameToGenerate;
         }
         else
         {
             parameterized = generics.Select(GetStandardizedType).ToArray();
-            cName = (wrap == null ? type.Name : wrap.ClassNameToGenerate).Split('`').First();
-            iName = wrap == null ? null : wrap.InterfaceNameToGenerate.Split('`').First();
+            cName = (eWrap == null ? type.Name : eWrap.ClassNameToGenerate).Split('`').First();
+            iName = eWrap == null ? null : eWrap.InterfaceNameToGenerate.Split('`').First();
         }
 
-        return new StandardizedType(type, ns, cName, iName, parameterized, wrap != null, type.IsArray);
+        return new StandardizedType(type, ns, cName, iName, parameterized, eWrap != null, type.IsArray);
     }
 }

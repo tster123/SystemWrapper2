@@ -129,4 +129,10 @@ public sealed class Test1
     {
         DoTest("OutExample");
     }
+
+    [TestMethod]
+    public void CtorTest()
+    {
+        DoTest("CtorExample");
+    }
 }

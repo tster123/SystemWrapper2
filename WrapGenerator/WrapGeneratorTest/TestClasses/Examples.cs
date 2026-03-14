@@ -4,6 +4,18 @@ using System.Text;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
 
 namespace WrapGeneratorTest.TestClasses;
+public class CtorExample
+{
+    public CtorExample(string foo)
+    {
+
+    }
+
+    public CtorExample(int a, string b, OutExample c)
+    {
+
+    }
+}
 
 public class OutExample
 {
