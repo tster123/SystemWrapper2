@@ -1,9 +1,51 @@
-﻿using System;
+﻿using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
+using System;
 using System.Collections.Generic;
+using System.Runtime.Versioning;
 using System.Text;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
 
 namespace WrapGeneratorTest.TestClasses;
+
+public class ExampleAttribute : Attribute
+{
+    public bool Boolean { get; set; }
+    public string String1 { get; set; }
+    public int Integer { get; set; }
+    public int? AnotherInt { get; set; }
+    public string? AnotherString { get; set; }
+
+    public ExampleAttribute(bool boolean, string string1 = "foo", int integer = 1)
+    {
+        Boolean = boolean;
+        String1 = string1;
+        Integer = integer;
+    }
+}
+
+public class AttributesExample
+{
+    [Obsolete]
+    [Example(true)]
+    public void Single()
+    {
+
+    }
+
+    [SupportedOSPlatform(platformName: "windows")]
+    [Obsolete]
+    [Example(true, "Mork", 42, AnotherString = "Foo")]
+    public void Double()
+    {
+
+    }
+
+    [Obsolete("This API supports obsolete formatter-based serialization. It should not be called or extended by application code.", DiagnosticId = "SYSLIB0051", UrlFormat = "https://aka.ms/dotnet-warnings/{0}")]
+    public void OldMethod()
+    {
+
+    }
+}
+
 public class CtorExample
 {
     public CtorExample(string foo)
@@ -28,7 +70,7 @@ public class OutExample
 
 public class WrappingExample
 {
-    public PropertyExample Prop { get; set; }
+    public PropertyExample? Prop { get; set; }
 
     public PropertyExample[] MakeProperties(PropertyExample[] props)
     {

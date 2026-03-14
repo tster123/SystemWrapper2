@@ -135,4 +135,10 @@ public sealed class Test1
     {
         DoTest("CtorExample");
     }
+
+    [TestMethod]
+    public void AttributesTest()
+    {
+        DoTest("AttributesExample");
+    }
 }

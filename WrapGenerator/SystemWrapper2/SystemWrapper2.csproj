@@ -14,4 +14,9 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\WrapGenerator\WrapGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
+
+	<PropertyGroup>
+		<NoWarn>0618</NoWarn>
+		<NoWarn>1416</NoWarn>
+	</PropertyGroup>
 </Project>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -118,6 +119,9 @@ internal class SingleClassSourceGenerator
             if (methodsToSkip.Any(m => m.DeclaringType == method.DeclaringType && m.Name == method.Name)) 
                 continue;
 
+            // skip methods that are part of properties
+            if (props.Any(p => p.GetMethod == method | p.SetMethod == method)) continue;
+
             // use a dummy StringBuilder if the declaring type is not this type so we don't redeclare methods
             // on the interface
             MethodInfo baseMethod = method.GetBaseDefinition();
@@ -129,9 +133,12 @@ internal class SingleClassSourceGenerator
                 interStr = new StringBuilder();
             }
 
-            // skip methods that are part of properties
-            if (props.Any(p => p.GetMethod == method | p.SetMethod == method)) continue;
-
+            string? attrStr = BuildAttributes(method);
+            if (attrStr != null)
+            {
+                interStr.Append(attrStr);
+                classStr.Append(attrStr);
+            }
             StandardizedType retType = GetStandardizedType(method.ReturnType);
             AddUsing(retType);
             string overrideStr = IsFromTypes(method, [typeof(object)]) ? "override " : "";
@@ -169,6 +176,148 @@ internal class SingleClassSourceGenerator
             classStr.AppendLine($"\t\t{formattedCall};");
             classStr.AppendLine("\t}");
         }
+    }
+
+    private string? BuildAttributes(MethodInfo method)
+    {
+        string GetCodeOfAttributeValue(object val, KeyValuePair<string, (PropertyInfo, object)> prop)
+        {
+            string strVal = val?.ToString() ?? "null";
+            if (val != null)
+            {
+                if (prop.Value.Item1.PropertyType == typeof(string))
+                {
+                    strVal = "\"" + strVal + "\"";
+                }
+                else if (prop.Value.Item1.PropertyType == typeof(bool))
+                {
+                    strVal = strVal.ToLower();
+                }
+            }
+
+            return strVal;
+        }
+
+        Attribute[] attrs = method.GetCustomAttributes().ToArray();
+        if (attrs.Length == 0) return null;
+        StringBuilder ret = new();
+        foreach (Attribute a in attrs)
+        {
+            string name = a.GetType().Name;
+            if (a.GetType().Namespace == "System.Runtime.CompilerServices") continue;
+            AddUsing(GetStandardizedType(a.GetType()));
+            if (name.EndsWith("Attribute")) name = name.Substring(0, name.Length - "Attribute".Length);
+            Dictionary<string, (PropertyInfo, object)> attrProps = GetAttributePropertiesWithNonDefaultValues(a);
+
+            if (attrProps.Count == 0)
+            {
+                ret.AppendLine($"[{name}]");
+            }
+            else
+            {
+                ConstructorInfo? ctor = GetValidConstructor(a);
+                if (ctor == null)
+                {
+                    Console.Error.WriteLine($"WARNING: cannot find ctor for [{name}] on {wrap.Type.Name}.{method.Name}");
+                    ret.AppendLine($"[{name}]");
+                    continue;
+                }
+                ret.Append($"[{name}(");
+                StringBuilder propSection = new();
+                bool first = true;
+                foreach (ParameterInfo param in ctor.GetParameters())
+                {
+                    if (!first) ret.Append(", ");
+                    first = false;
+                    foreach (KeyValuePair<string, (PropertyInfo, object)> prop in attrProps.ToArray())
+                    {
+                        if (prop.Value.Item1.PropertyType == param.ParameterType &&
+                            prop.Key.Equals(param.Name, StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            object val = prop.Value.Item2;
+                            var strVal = GetCodeOfAttributeValue(val, prop);
+
+                            ret.Append(param.Name).Append(": ").Append(strVal);
+                            attrProps.Remove(prop.Key);
+                        }
+                    }
+                }
+
+                foreach (KeyValuePair<string, (PropertyInfo, object)> prop in attrProps.ToArray())
+                {
+                    if (!first) ret.Append(", ");
+                    first = false;
+                    ret.Append($"{prop.Key} = {GetCodeOfAttributeValue(prop.Value.Item2, prop)}");
+                }
+                ret.AppendLine(")]");
+            }
+            
+        }
+
+        return ret.ToString();
+    }
+
+    private ConstructorInfo? GetValidConstructor(Attribute a)
+    {
+        ConstructorInfo? toRet = null;
+        int max = int.MinValue;
+        foreach (ConstructorInfo ctor in a.GetType().GetConstructors(BindingFlags.Instance | BindingFlags.Public))
+        {
+            ParameterInfo[] ctorParams = ctor.GetParameters();
+            if (ctorParams.Length > max)
+            {
+                max = ctorParams.Length;
+                toRet = ctor;
+            }
+        }
+
+        return toRet;
+        /*foreach (ConstructorInfo ctor in a.GetType().GetConstructors(BindingFlags.Instance | BindingFlags.Public))
+        {
+            bool thisCtorWorks = true;
+            ParameterInfo[] ctorParams = ctor.GetParameters();
+            foreach (PropertyInfo prop in attrProps)
+            {
+                if (prop.DeclaringType == typeof(Attribute) || prop.DeclaringType == typeof(object)) continue;
+                object? defaultValue = prop.PropertyType.IsValueType ? Activator.CreateInstance(prop.PropertyType) : null;
+                object? value = prop.GetValue(a);
+                if (Equals(defaultValue, value)) continue;  // value doesn't need to be given in ctor
+                thisCtorWorks = false; // this won't work unless we find a valid parameter
+                foreach (ParameterInfo ctorParam in ctorParams)
+                {
+                    if (ctorParam.ParameterType == prop.PropertyType &&
+                        ctorParam.Name.Equals(prop.Name, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        thisCtorWorks = true; // found a valid one!
+                        break;
+                    }
+                }
+
+                if (!thisCtorWorks) break;
+            }
+
+            if (thisCtorWorks) return ctor;
+        }
+
+        return null;
+        */
+    }
+
+    private Dictionary<string, (PropertyInfo, object)> GetAttributePropertiesWithNonDefaultValues(Attribute a)
+    {
+        Dictionary<string, (PropertyInfo, object)> ret = new();
+        foreach (PropertyInfo p in a.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (p.DeclaringType == typeof(object) || p.DeclaringType == typeof(Attribute)) continue;
+            object? defaultValue = p.PropertyType.IsValueType ? Activator.CreateInstance(p.PropertyType) : null;
+            object? value = p.GetValue(a);
+            if (!Equals(defaultValue, value))
+            {
+                ret[p.Name] = (p, value);
+            }
+        }
+
+        return ret;
     }
 
     private (string, string) BuildParameterDeclarationAndArgumentRValue(ParameterInfo param)
