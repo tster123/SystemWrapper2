@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -180,18 +179,23 @@ internal class SingleClassSourceGenerator
 
     private string? BuildAttributes(MethodInfo method)
     {
-        string GetCodeOfAttributeValue(object val, KeyValuePair<string, (PropertyInfo, object)> prop)
+        string GetCodeOfAttributeValue(object? val, Type valType)
         {
             string strVal = val?.ToString() ?? "null";
             if (val != null)
             {
-                if (prop.Value.Item1.PropertyType == typeof(string))
+                if (valType == typeof(string))
                 {
                     strVal = "\"" + strVal + "\"";
                 }
-                else if (prop.Value.Item1.PropertyType == typeof(bool))
+                else if (valType == typeof(bool))
                 {
                     strVal = strVal.ToLower();
+                }
+                else if (valType.IsEnum)
+                {
+                    AddUsing(GetStandardizedType(valType));
+                    strVal = $"{valType.Name}.{strVal}";
                 }
             }
 
@@ -209,49 +213,55 @@ internal class SingleClassSourceGenerator
             if (name.EndsWith("Attribute")) name = name.Substring(0, name.Length - "Attribute".Length);
             Dictionary<string, (PropertyInfo, object)> attrProps = GetAttributePropertiesWithNonDefaultValues(a);
 
-            if (attrProps.Count == 0)
+            ConstructorInfo? ctor = GetValidConstructor(a);
+            if (ctor == null)
             {
+                Console.Error.WriteLine($"WARNING: cannot find ctor for [{name}] on {wrap.Type.Name}.{method.Name}");
                 ret.AppendLine($"[{name}]");
+                continue;
             }
-            else
-            {
-                ConstructorInfo? ctor = GetValidConstructor(a);
-                if (ctor == null)
-                {
-                    Console.Error.WriteLine($"WARNING: cannot find ctor for [{name}] on {wrap.Type.Name}.{method.Name}");
-                    ret.AppendLine($"[{name}]");
-                    continue;
-                }
-                ret.Append($"[{name}(");
-                StringBuilder propSection = new();
-                bool first = true;
-                foreach (ParameterInfo param in ctor.GetParameters())
-                {
-                    if (!first) ret.Append(", ");
-                    first = false;
-                    foreach (KeyValuePair<string, (PropertyInfo, object)> prop in attrProps.ToArray())
-                    {
-                        if (prop.Value.Item1.PropertyType == param.ParameterType &&
-                            prop.Key.Equals(param.Name, StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            object val = prop.Value.Item2;
-                            var strVal = GetCodeOfAttributeValue(val, prop);
 
-                            ret.Append(param.Name).Append(": ").Append(strVal);
-                            attrProps.Remove(prop.Key);
-                        }
+            ret.Append($"[{name}(");
+            bool first = true;
+            foreach (ParameterInfo param in ctor.GetParameters())
+            {
+                if (!first) ret.Append(", ");
+                first = false;
+                bool found = false;
+                ret.Append(param.Name).Append(": ");
+                foreach (KeyValuePair<string, (PropertyInfo, object)> prop in attrProps.ToArray())
+                {
+                    if (prop.Value.Item1.PropertyType == param.ParameterType &&
+                        prop.Key.Equals(param.Name, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        object val = prop.Value.Item2;
+                        var strVal = GetCodeOfAttributeValue(val, prop.Value.Item1.PropertyType);
+
+                        ret.Append(strVal);
+                        attrProps.Remove(prop.Key);
+                        found = true;
+                        break;
                     }
                 }
 
-                foreach (KeyValuePair<string, (PropertyInfo, object)> prop in attrProps.ToArray())
+                if (!found)
                 {
-                    if (!first) ret.Append(", ");
-                    first = false;
-                    ret.Append($"{prop.Key} = {GetCodeOfAttributeValue(prop.Value.Item2, prop)}");
+                    object? defaultValue = param.ParameterType.IsValueType
+                        ? Activator.CreateInstance(param.ParameterType)
+                        : null;
+                    ret.Append(GetCodeOfAttributeValue(defaultValue, param.ParameterType));
                 }
-                ret.AppendLine(")]");
             }
-            
+
+            foreach (KeyValuePair<string, (PropertyInfo, object)> prop in attrProps.ToArray())
+            {
+                if (!first) ret.Append(", ");
+                first = false;
+                ret.Append($"{prop.Key} = {GetCodeOfAttributeValue(prop.Value.Item2, prop.Value.Item1.PropertyType)}");
+            }
+
+            ret.AppendLine(")]");
+
         }
 
         return ret.ToString();

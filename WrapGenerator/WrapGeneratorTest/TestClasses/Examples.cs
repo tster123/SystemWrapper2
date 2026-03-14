@@ -6,17 +6,24 @@ using System.Text;
 
 namespace WrapGeneratorTest.TestClasses;
 
+
+public enum ExampleEnum
+{
+    Foo, Bar, Baz, Buz
+}
 public class ExampleAttribute : Attribute
 {
+    public ExampleEnum AnEnum { get; set; }
     public bool Boolean { get; set; }
     public string String1 { get; set; }
     public int Integer { get; set; }
     public int? AnotherInt { get; set; }
     public string? AnotherString { get; set; }
 
-    public ExampleAttribute(bool boolean, string string1 = "foo", int integer = 1)
+    public ExampleAttribute(bool boolean, ExampleEnum anEnum, string string1 = "foo", int integer = 1)
     {
         Boolean = boolean;
+        AnEnum  = anEnum;
         String1 = string1;
         Integer = integer;
     }
@@ -25,7 +32,7 @@ public class ExampleAttribute : Attribute
 public class AttributesExample
 {
     [Obsolete]
-    [Example(true)]
+    [Example(true, ExampleEnum.Buz)]
     public void Single()
     {
 
@@ -33,7 +40,7 @@ public class AttributesExample
 
     [SupportedOSPlatform(platformName: "windows")]
     [Obsolete]
-    [Example(true, "Mork", 42, AnotherString = "Foo")]
+    [Example(true, ExampleEnum.Bar, integer: 42, AnotherString = "Foo")]
     public void Double()
     {
 
