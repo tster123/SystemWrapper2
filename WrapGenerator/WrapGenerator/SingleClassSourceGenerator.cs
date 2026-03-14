@@ -11,7 +11,7 @@ namespace WrapGenerator;
 internal class SingleClassSourceGenerator
 {
     private readonly GenRegistrar registrar;
-    private ClassToWrap wrap;
+    private readonly ClassToWrap wrap;
     private readonly HashSet<string> usings = new();
     private readonly StringBuilder interfaceStr = new();
     private readonly StringBuilder classStr = new();
@@ -118,7 +118,7 @@ internal class SingleClassSourceGenerator
             if (methodsToSkip.Any(m => m.DeclaringType == method.DeclaringType && m.Name == method.Name)) 
                 continue;
 
-            // use a dummy stringbuilder if the declaring type is not this type so we don't redeclare methods
+            // use a dummy StringBuilder if the declaring type is not this type so we don't redeclare methods
             // on the interface
             MethodInfo baseMethod = method.GetBaseDefinition();
             StringBuilder interStr = interfaceStr;
@@ -331,13 +331,13 @@ internal class SingleClassSourceGenerator
         {
             parameterized = null;
             cName = eWrap == null ? type.Name : eWrap.ClassNameToGenerate;
-            iName = eWrap == null ? null : eWrap.InterfaceNameToGenerate;
+            iName = eWrap?.InterfaceNameToGenerate;
         }
         else
         {
             parameterized = generics.Select(GetStandardizedType).ToArray();
             cName = (eWrap == null ? type.Name : eWrap.ClassNameToGenerate).Split('`').First();
-            iName = eWrap == null ? null : eWrap.InterfaceNameToGenerate.Split('`').First();
+            iName = eWrap?.InterfaceNameToGenerate.Split('`').First();
         }
 
         return new StandardizedType(type, ns, cName, iName, parameterized, eWrap != null, type.IsArray);
