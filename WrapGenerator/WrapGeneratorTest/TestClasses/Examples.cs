@@ -39,6 +39,7 @@ public class AttributesExample
     }
 
     [SupportedOSPlatform(platformName: "windows")]
+    [UnsupportedOSPlatform(platformName: "linux")]
     [Obsolete]
     [Example(true, ExampleEnum.Bar, integer: 42, AnotherString = "Foo")]
     public void Double()

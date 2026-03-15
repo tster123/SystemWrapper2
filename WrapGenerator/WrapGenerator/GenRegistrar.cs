@@ -54,7 +54,7 @@ internal class GenRegistrar
             if (!t.IsClass) continue;
             if (t.IsNested) continue;
             // static classes
-            if (t.IsAbstract && t.IsSealed) continue; // TODO: support static classes?
+            if (t.IsAbstract && !t.IsSealed) continue; // don't wrap abstract classes, but do wrap static classes.
             if (typeof(Exception).IsAssignableFrom(t)) continue;
             if (t.Namespace == nsWrap.Namespace)
             {

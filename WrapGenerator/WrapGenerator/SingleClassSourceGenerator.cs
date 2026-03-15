@@ -41,17 +41,21 @@ internal class SingleClassSourceGenerator
 
         StandardizedType innerType = GetStandardizedType(wrap.Type);
 
-        interfaceStr.AppendLine($"\t{innerType.UseType(true)} WrappedInstance {{ get; }}");
+        classStr.AppendLine(
+            @$"public class {wrap.ClassNameToGenerate}{topLevelGenerics} : {wrap.InterfaceNameToGenerate}{topLevelGenerics} {{");
+        if (!wrap.IsStatic)
+        {
+            interfaceStr.AppendLine($"\t{innerType.UseType(true)} WrappedInstance {{ get; }}");
 
-        classStr.Append(@$"public class {wrap.ClassNameToGenerate}{topLevelGenerics} : {wrap.InterfaceNameToGenerate}{topLevelGenerics} {{
-	private readonly {innerType.UseType(true)} inner;
-	public {innerType.UseType(true)} WrappedInstance => inner;
-");
+            classStr.AppendLine($@"    private readonly {innerType.UseType(true)} inner;
+	public {innerType.UseType(true)} WrappedInstance => inner;");
 
-        GenerateConstructors(innerType);
-        classStr.AppendLine();
-        GenerateProperties();
-        classStr.AppendLine();
+            GenerateConstructors(innerType);
+            classStr.AppendLine();
+            GenerateProperties();
+            classStr.AppendLine();
+        }
+
         GenerateMethods(implementedInterfaces);
         StringBuilder s = new();
         foreach (string u in usings)
@@ -110,7 +114,8 @@ internal class SingleClassSourceGenerator
 
     private void GenerateMethods(Type[] implementedInterfaces)
     {
-        MethodInfo[] methods = wrap.Type.GetMethods(BindingFlags.Instance | BindingFlags.Public);
+        BindingFlags staticOrInstance = wrap.IsStatic ? BindingFlags.Static : BindingFlags.Instance;
+        MethodInfo[] methods = wrap.Type.GetMethods(staticOrInstance | BindingFlags.Public);
         var props = wrap.Type.GetProperties();
 
         foreach (MethodInfo method in methods)
@@ -170,7 +175,8 @@ internal class SingleClassSourceGenerator
                 retFormat = "return {0}";
             }
 
-            string rValue = ConvertRValueToWrapped($"inner.{method.Name}({argList})", retType);
+            string inner = wrap.IsStatic ? wrap.Type.Name : "inner";
+            string rValue = ConvertRValueToWrapped($"{inner}.{method.Name}({argList})", retType);
             string formattedCall = string.Format(retFormat, rValue);
             classStr.AppendLine($"\t\t{formattedCall};");
             classStr.AppendLine("\t}");
@@ -179,93 +185,91 @@ internal class SingleClassSourceGenerator
 
     private string? BuildAttributes(MethodInfo method)
     {
-        string GetCodeOfAttributeValue(object? val, Type valType)
-        {
-            string strVal = val?.ToString() ?? "null";
-            if (val != null)
-            {
-                if (valType == typeof(string))
-                {
-                    strVal = "\"" + strVal + "\"";
-                }
-                else if (valType == typeof(bool))
-                {
-                    strVal = strVal.ToLower();
-                }
-                else if (valType.IsEnum)
-                {
-                    AddUsing(GetStandardizedType(valType));
-                    strVal = $"{valType.Name}.{strVal}";
-                }
-            }
-
-            return strVal;
-        }
-
         Attribute[] attrs = method.GetCustomAttributes().ToArray();
         if (attrs.Length == 0) return null;
         StringBuilder ret = new();
         foreach (Attribute a in attrs)
         {
-            string name = a.GetType().Name;
-            if (a.GetType().Namespace == "System.Runtime.CompilerServices") continue;
-            AddUsing(GetStandardizedType(a.GetType()));
-            if (name.EndsWith("Attribute")) name = name.Substring(0, name.Length - "Attribute".Length);
-            Dictionary<string, (PropertyInfo, object)> attrProps = GetAttributePropertiesWithNonDefaultValues(a);
-
-            ConstructorInfo? ctor = GetValidConstructor(a);
-            if (ctor == null)
-            {
-                Console.Error.WriteLine($"WARNING: cannot find ctor for [{name}] on {wrap.Type.Name}.{method.Name}");
-                ret.AppendLine($"[{name}]");
-                continue;
-            }
-
-            ret.Append($"[{name}(");
-            bool first = true;
-            foreach (ParameterInfo param in ctor.GetParameters())
-            {
-                if (!first) ret.Append(", ");
-                first = false;
-                bool found = false;
-                ret.Append(param.Name).Append(": ");
-                foreach (KeyValuePair<string, (PropertyInfo, object)> prop in attrProps.ToArray())
-                {
-                    if (prop.Value.Item1.PropertyType == param.ParameterType &&
-                        prop.Key.Equals(param.Name, StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        object val = prop.Value.Item2;
-                        var strVal = GetCodeOfAttributeValue(val, prop.Value.Item1.PropertyType);
-
-                        ret.Append(strVal);
-                        attrProps.Remove(prop.Key);
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found)
-                {
-                    object? defaultValue = param.ParameterType.IsValueType
-                        ? Activator.CreateInstance(param.ParameterType)
-                        : null;
-                    ret.Append(GetCodeOfAttributeValue(defaultValue, param.ParameterType));
-                }
-            }
-
-            foreach (KeyValuePair<string, (PropertyInfo, object)> prop in attrProps.ToArray())
-            {
-                if (!first) ret.Append(", ");
-                first = false;
-                ret.Append($"{prop.Key} = {GetCodeOfAttributeValue(prop.Value.Item2, prop.Value.Item1.PropertyType)}");
-            }
-
-            ret.AppendLine(")]");
-
+            string? attrCode = BuildSingleAttributeCode(method, a);
+            if (attrCode != null) ret.Append("\t").AppendLine(attrCode);
         }
 
         return ret.ToString();
     }
+
+    private string? BuildSingleAttributeCode(MethodInfo method, Attribute a)
+    {
+        string name = a.GetType().Name;
+        if (a.GetType().Namespace == "System.Runtime.CompilerServices") return null;
+        AddUsing(GetStandardizedType(a.GetType()));
+        if (name.EndsWith("Attribute")) name = name.Substring(0, name.Length - "Attribute".Length);
+        Dictionary<string, AttributePropertyInfo> attrProps = GetAttributePropertiesWithNonDefaultValues(a);
+
+        ConstructorInfo? ctor = GetValidConstructor(a);
+        if (ctor == null)
+        {
+            Console.Error.WriteLine($"WARNING: cannot find ctor for [{name}] on {wrap.Type.Name}.{method.Name}");
+            return $"[{name}]";
+        }
+
+        List<String> attrParts = new();
+        foreach (ParameterInfo param in ctor.GetParameters())
+        {
+            bool found = false;
+            foreach (KeyValuePair<string, AttributePropertyInfo> prop in attrProps.ToArray())
+            {
+                if (prop.Value.Property.PropertyType != param.ParameterType ||
+                    !prop.Key.Equals(param.Name, StringComparison.InvariantCultureIgnoreCase)) continue;
+                found = true;
+                object? val = prop.Value.Value;
+                object? defaultValue =
+                    param.HasDefaultValue ? param.DefaultValue : DefaultValueOf(param.ParameterType);
+                if (Equals(val, defaultValue)) break;
+
+                var strVal = GetCodeOfAttributeValue(val, prop.Value.Property.PropertyType);
+                attrParts.Add($"{param.Name}: {strVal}");
+                attrProps.Remove(prop.Key);
+                break;
+            }
+
+            if (!found && !param.IsOptional)
+            {
+                object? defaultValue = DefaultValueOf(param.ParameterType);
+                attrParts.Add($"{param.Name}: {GetCodeOfAttributeValue(defaultValue, param.ParameterType)}");
+            }
+        }
+
+        foreach (KeyValuePair<string, AttributePropertyInfo> prop in attrProps.ToArray())
+        {
+            attrParts.Add($"{prop.Key} = {GetCodeOfAttributeValue(prop.Value.Value, prop.Value.Property.PropertyType)}");
+        }
+
+        return $"[{name}({string.Join(", ", attrParts)})]";
+    }
+
+    string GetCodeOfAttributeValue(object? val, Type valType)
+    {
+        string strVal = val?.ToString() ?? "null";
+        if (val != null)
+        {
+            if (valType == typeof(string))
+            {
+                strVal = "\"" + strVal + "\"";
+            }
+            else if (valType == typeof(bool))
+            {
+                strVal = strVal.ToLower();
+            }
+            else if (valType.IsEnum)
+            {
+                AddUsing(GetStandardizedType(valType));
+                strVal = $"{valType.Name}.{strVal}";
+            }
+        }
+
+        return strVal;
+    }
+
 
     private ConstructorInfo? GetValidConstructor(Attribute a)
     {
@@ -313,17 +317,33 @@ internal class SingleClassSourceGenerator
         */
     }
 
-    private Dictionary<string, (PropertyInfo, object)> GetAttributePropertiesWithNonDefaultValues(Attribute a)
+    private class AttributePropertyInfo
     {
-        Dictionary<string, (PropertyInfo, object)> ret = new();
+        public string Name { get; set; }
+        public PropertyInfo Property { get; set; }
+        public object? Value { get; set; }
+
+        public AttributePropertyInfo(string name, PropertyInfo property, object? value)
+        {
+            Name     = name;
+            Property = property;
+            Value    = value;
+        }
+    }
+
+    private object? DefaultValueOf(Type t) => t.IsValueType ? Activator.CreateInstance(t) : null;
+
+    private Dictionary<string, AttributePropertyInfo> GetAttributePropertiesWithNonDefaultValues(Attribute a)
+    {
+        Dictionary<string, AttributePropertyInfo> ret = new();
         foreach (PropertyInfo p in a.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
             if (p.DeclaringType == typeof(object) || p.DeclaringType == typeof(Attribute)) continue;
-            object? defaultValue = p.PropertyType.IsValueType ? Activator.CreateInstance(p.PropertyType) : null;
+            object? defaultValue = DefaultValueOf(p.PropertyType);
             object? value = p.GetValue(a);
             if (!Equals(defaultValue, value))
             {
-                ret[p.Name] = (p, value);
+                ret[p.Name] = new(p.Name, p, value);
             }
         }
 

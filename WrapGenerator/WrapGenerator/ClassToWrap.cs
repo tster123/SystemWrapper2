@@ -10,6 +10,7 @@ internal record ClassToWrap
     internal readonly string ClassNameToGenerate;
     internal readonly string InterfaceNameToGenerate;
     internal readonly string[]? ClassLevelGenericParameters;
+    internal bool IsStatic => Type.IsSealed && Type.IsAbstract;
     public ClassToWrap(Type type,
         WrapNamespace wrapSettings)
     {
