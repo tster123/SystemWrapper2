@@ -50,6 +50,7 @@ public sealed class Test1
     [TestMethod]
     public void TestMethod1()
     {
+        FileSystemWatcher w = new FileSystemWatcher();
         SourceGenerator gen = new();
         TestSourceGeneratorContext context = new TestSourceGeneratorContext(new()
         {
@@ -59,8 +60,8 @@ public sealed class Test1
 </Generate>"
         });
         gen.Execute(context);
-        Console.WriteLine(context.SourcesAdded["Wrapped/System/IO/FileInfoWrap.cs"]);
-        Assert.AreEqual("foo", context.SourcesAdded["Wrapped/System/IO/FileInfoWrap.cs"]);
+        Console.WriteLine(context.SourcesAdded["Wrapped/System/IO/FileSystemWatcherWrap.cs"]);
+        Assert.AreEqual("foo", context.SourcesAdded["Wrapped/System/IO/FileSystemWatcherWrap.cs"]);
     }
 
     private void DoTestWithMultiple(string className)
@@ -166,6 +167,17 @@ public sealed class Test1
         ClassToWrap wrap = new(typeof(FileStream), wrapNs);
         registrar.Register(wrap);
         registrar.Register(new ClassToWrap(typeof(Stream), wrapNs));
+        SingleClassSourceGenerator generator = new(registrar, wrap);
+        string code = generator.GeneratorSource();
+        Console.WriteLine(code);
+    }
+
+    [TestMethod]
+    public void FileSystemWatcherTest()
+    {
+        GenRegistrar registrar = new();
+        ClassToWrap wrap = new(typeof(FileSystemWatcher), wrapNs);
+        registrar.Register(wrap);
         SingleClassSourceGenerator generator = new(registrar, wrap);
         string code = generator.GeneratorSource();
         Console.WriteLine(code);

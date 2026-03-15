@@ -7,7 +7,7 @@ using System.Text;
 
 namespace WrapGenerator;
 
-//TODO - provide option to wrap static classes like Path and File.
+//TODO - do events properly
 internal class SingleClassSourceGenerator
 {
     private readonly GenRegistrar registrar;

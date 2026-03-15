@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -50,6 +51,12 @@ internal class GenRegistrar
         }
         foreach (Type t in a.GetTypes())
         {
+            string name = t.Name;
+            
+            if (t == typeof(FileSystemWatcher))
+            {
+                Console.WriteLine("foo");
+            }
             if (t.IsNotPublic) continue;
             if (!t.IsClass) continue;
             if (t.IsNested) continue;
