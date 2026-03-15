@@ -139,11 +139,25 @@ public class GenericExample<T1>
     }
 }
 
-public interface IFoo
+public interface IFoo : IBar
 {
+    void Foo();
+}
+
+public interface IBar
+{
+    void Bar();
 }
 
 public class InterfaceExample : IFoo
 {
     public int Mork { get; set; }
+
+    public void Bar()
+    {
+    }
+
+    public void Foo()
+    {
+    }
 }

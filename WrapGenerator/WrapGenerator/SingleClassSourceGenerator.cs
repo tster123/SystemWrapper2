@@ -27,13 +27,25 @@ internal class SingleClassSourceGenerator
         usings.Add(wrap.Type.Namespace);
         string topLevelGenerics = wrap.ClassLevelGenericParameters == null ? "" : $"<{string.Join(", ", wrap.ClassLevelGenericParameters)}>";
         interfaceStr.Append($"public interface {wrap.InterfaceNameToGenerate}{topLevelGenerics}");
-        Type[] implementedInterfaces = wrap.Type.GetInterfaces();
-        if (implementedInterfaces.Length != 0)
+        List<StandardizedType> implementedInterfaces = wrap.Type.GetInterfaces().Select(i => GetStandardizedType(i)).ToList();
+
+        // we might have wrapped the base class (for example FileStream extends Stream which is wrapped), so check if we did and add it
+        Type? baseClass = wrap.Type.BaseType;
+        if (baseClass != null)
         {
-            interfaceStr.Append(" : " + string.Join(", ", implementedInterfaces.Select(i => i.Name))); // TODO: handle generic interfaces
-            foreach (Type i in implementedInterfaces)
+            StandardizedType st = GetStandardizedType(baseClass);
+            if (st.IsWrapped && st.Interface != null)
             {
-                if (i.Namespace != null) usings.Add(i.Namespace);
+                implementedInterfaces.Add(st);
+            }
+        }
+
+        if (implementedInterfaces.Count != 0)
+        {
+            interfaceStr.Append(" : " + string.Join(", ", implementedInterfaces.Select(st => st.Interface ?? st.Name))); // TODO: handle generic interfaces
+            foreach (StandardizedType t in implementedInterfaces)
+            {
+                if (t.Namespace != null) usings.Add(t.Namespace);
             }
         }
 
@@ -68,7 +80,10 @@ internal class SingleClassSourceGenerator
         interfaceStr.AppendLine("}");
         classStr.AppendLine("}");
         s.AppendLine(interfaceStr.ToString());
-        s.AppendLine(classStr.ToString());
+        
+        
+            s.AppendLine(classStr.ToString());
+        
         s.AppendLine("}"); // close namespace
         return s.ToString();
     }
@@ -112,7 +127,7 @@ internal class SingleClassSourceGenerator
         typeof(object).GetMethod("GetType")
     ];
 
-    private void GenerateMethods(Type[] implementedInterfaces)
+    private void GenerateMethods(List<StandardizedType> implementedInterfaces)
     {
         BindingFlags staticOrInstance = wrap.IsStatic ? BindingFlags.Static : BindingFlags.Instance;
         MethodInfo[] methods = wrap.Type.GetMethods(staticOrInstance | BindingFlags.Public);
@@ -130,9 +145,10 @@ internal class SingleClassSourceGenerator
             // on the interface
             MethodInfo baseMethod = method.GetBaseDefinition();
             StringBuilder interStr = interfaceStr;
-            if (method.DeclaringType != wrap.Type ||
-                baseMethod != null && baseMethod.DeclaringType != method.DeclaringType ||
-                IsFromTypes(method, implementedInterfaces))
+            if (//method.DeclaringType != wrap.Type ||
+                //baseMethod != null && baseMethod.DeclaringType != method.DeclaringType ||
+                IsFromTypes(method, implementedInterfaces) ||
+                (baseMethod ?? method).DeclaringType == typeof(object))
             {
                 interStr = new StringBuilder();
             }
@@ -145,11 +161,11 @@ internal class SingleClassSourceGenerator
             }
             StandardizedType retType = GetStandardizedType(method.ReturnType);
             AddUsing(retType);
-            string overrideStr = IsFromTypes(method, [typeof(object)]) ? "override " : "";
+            string overrideStr = IsFromTypes(method, [GetStandardizedType(typeof(object))]) ? "override " : "";
             string methodGenericParamString = GenerateMethodGenericParamString(method);
             string retTypeStr = retType.UseType();
-            interStr.Append($"    public {retTypeStr} {method.Name}{methodGenericParamString}(");
-            classStr.Append($"    public {overrideStr}{retTypeStr} {method.Name}{methodGenericParamString}(");
+            interStr.Append($"\tpublic {retTypeStr} {method.Name}{methodGenericParamString}(");
+            classStr.Append($"\tpublic {overrideStr}{retTypeStr} {method.Name}{methodGenericParamString}(");
             bool first = true;
             StringBuilder argList = new();
             foreach (ParameterInfo param in method.GetParameters())
@@ -402,11 +418,11 @@ internal class SingleClassSourceGenerator
         return rValue;
     }
 
-    private static bool IsFromTypes(MethodInfo method, Type[] types)
+    private static bool IsFromTypes(MethodInfo method, List<StandardizedType> types)
     {
-        foreach (Type type in types)
+        foreach (StandardizedType type in types)
         {
-            foreach (MethodInfo m in type.GetMethods())
+            foreach (MethodInfo m in type.Original.GetMethods())
             {
                 if (m.Name == method.Name)
                 {
@@ -520,5 +536,11 @@ internal class SingleClassSourceGenerator
         }
 
         return new StandardizedType(type, ns, cName, iName, parameterized, eWrap != null, type.IsArray);
+    }
+
+    private record ClassName(string? Namespace, string Name)
+    {
+        public string? Namespace { get; } = Namespace;
+        public string Name { get; } = Name;
     }
 }
