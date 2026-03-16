@@ -44,10 +44,15 @@ internal class GenRegistrar
 
     private void LoadAssembly(WrapNamespace nsWrap, Assembly a)
     {
-        Regex? exclude = null;
+        Regex? exclude = null, include = null;
         if (nsWrap.ExcludeFilter != null)
         {
             exclude = new Regex(nsWrap.ExcludeFilter);
+        }
+
+        if (nsWrap.OnlyIncludeFilter != null)
+        {
+            include = new Regex(nsWrap.OnlyIncludeFilter);
         }
         foreach (Type t in a.GetTypes())
         {
@@ -66,6 +71,7 @@ internal class GenRegistrar
             if (t.Namespace == nsWrap.Namespace)
             {
                 if (exclude != null && exclude.IsMatch(t.Name)) continue;
+                if (include != null && !include.IsMatch(t.Name)) continue;
                 ClassToWrap wrap = new(t, nsWrap);
                 Register(wrap);
             }

@@ -1,8 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Diagnostics;
-using Microsoft.CodeAnalysis.Operations;
 using Microsoft.CodeAnalysis.Text;
-using Microsoft.Win32;
 using WrapGenerator;
 
 namespace WrapGenratorTest;
@@ -48,7 +45,7 @@ public sealed class Test1
     };
 
     [TestMethod]
-    public void TestMethod1()
+    public void SystemIoTest()
     {
         FileSystemWatcher w = new FileSystemWatcher();
         SourceGenerator gen = new();
@@ -57,11 +54,28 @@ public sealed class Test1
             ["Namespaces.xml"] = @"<?xml version=""1.0"" encoding=""utf-8"" ?>
 <Generate>
 	<Namespace Namespace=""System.IO"" TargetNamespaceFormat=""Wrapped.System.IO"" />
+<Namespace Namespace=""System.Diagnostics"" TargetNamespaceFormat=""Wrapped.System.Diagnostics""
+		   IncludeOnly=""^(Process)|(ProcessStartInfo)$"" />
 </Generate>"
         });
         gen.Execute(context);
         Console.WriteLine(context.SourcesAdded["Wrapped/System/IO/FileSystemWatcherWrap.cs"]);
-        Assert.AreEqual("foo", context.SourcesAdded["Wrapped/System/IO/FileSystemWatcherWrap.cs"]);
+    }
+
+    [TestMethod]
+    public void SystemDiagnosticsTest()
+    {
+        FileSystemWatcher w = new FileSystemWatcher();
+        SourceGenerator gen = new();
+        TestSourceGeneratorContext context = new TestSourceGeneratorContext(new()
+        {
+            ["Namespaces.xml"] = @"<?xml version=""1.0"" encoding=""utf-8"" ?>
+<Generate>
+	<Namespace Namespace=""System.Diagnostics"" TargetNamespaceFormat=""Wrapped.System.Diagnostics"" />
+</Generate>"
+        });
+        gen.Execute(context);
+        Console.WriteLine(context.SourcesAdded["Wrapped/System/Diagnostics/ProcessWrap.cs"]);
     }
 
     private void DoTestWithMultiple(string className)
@@ -158,6 +172,12 @@ public sealed class Test1
     public void AttributesTest()
     {
         DoTest("AttributesExample");
+    }
+
+    [TestMethod]
+    public void EventTest()
+    {
+        DoTestWithMultiple("EventExample");
     }
 
     [TestMethod]

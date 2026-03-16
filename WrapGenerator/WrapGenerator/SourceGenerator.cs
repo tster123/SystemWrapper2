@@ -59,11 +59,13 @@ public class SourceGenerator : ISourceGenerator
                 string ns = nsElem.Attribute("Namespace").Value;
                 string targetNsFormat = nsElem.Attribute("TargetNamespaceFormat").Value;
                 string? excludeFilter = nsElem.Attribute("Exclude")?.Value;
+                string? includeFilter = nsElem.Attribute("IncludeOnly")?.Value;
                 registrar.Register(new WrapNamespace
                 {
                     Namespace = ns,
                     TargetNamespaceFormat = targetNsFormat,
-                    ExcludeFilter = excludeFilter
+                    ExcludeFilter = excludeFilter,
+                    OnlyIncludeFilter = includeFilter,
                 });
             }
         }

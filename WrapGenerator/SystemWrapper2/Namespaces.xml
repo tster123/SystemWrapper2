@@ -2,4 +2,6 @@
 <Generate>
 	<Namespace Namespace="System.IO" TargetNamespaceFormat="Wrapped.System.IO"
 			   Exclude="Unmanaged.*|BufferedStream|.*Options.*"/>
+	<Namespace Namespace="System.Diagnostics" TargetNamespaceFormat="Wrapped.System.Diagnostics"
+	           IncludeOnly="^((Process)|(ProcessStartInfo))$" />
 </Generate>

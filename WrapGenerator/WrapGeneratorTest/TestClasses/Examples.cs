@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.Versioning;
 using System.Text;
+#pragma warning disable CS0067 // Event is never used
 
 namespace WrapGeneratorTest.TestClasses;
 
@@ -159,5 +160,23 @@ public class InterfaceExample : IFoo
 
     public void Foo()
     {
+    }
+}
+
+public class EventExample
+{
+    public event EventHandler? SimpleEvent;
+
+    public event EventHandler<EventArgs>? WithArgs;
+
+    public event EventHandler<ExampleEventArgs>? WithCustomArgs;
+}
+
+public class ExampleEventArgs : EventArgs
+{
+    public int Foo { get; }
+    public ExampleEventArgs(int foo)
+    {
+        Foo = foo;
     }
 }

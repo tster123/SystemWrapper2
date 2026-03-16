@@ -15,15 +15,15 @@ internal class SingleClassSourceGenerator
     private readonly HashSet<string> usings = new();
     private readonly StringBuilder interfaceStr = new();
     private readonly StringBuilder classStr = new();
-    private readonly string WrappedProperty;
-    private readonly StandardizedType StandardizedType;
+    private readonly string wrappedProperty;
+    private readonly StandardizedType standardizedType;
 
     public SingleClassSourceGenerator(GenRegistrar registrar, ClassToWrap wrap)
     {
         this.registrar = registrar;
         this.wrap = wrap;
-        StandardizedType = GetStandardizedType(wrap.Type);
-        WrappedProperty = $"Wrapped{StandardizedType.UseType(true)}";
+        standardizedType = GetStandardizedType(wrap.Type);
+        wrappedProperty = $"Wrapped{standardizedType.UseType(true)}";
     }
 
     public string GeneratorSource()
@@ -31,7 +31,7 @@ internal class SingleClassSourceGenerator
         usings.Add(wrap.Type.Namespace);
         string topLevelGenerics = wrap.ClassLevelGenericParameters == null ? "" : $"<{string.Join(", ", wrap.ClassLevelGenericParameters)}>";
         interfaceStr.Append($"public interface {wrap.InterfaceNameToGenerate}{topLevelGenerics}");
-        List<StandardizedType> implementedInterfaces = wrap.Type.GetInterfaces().Select(i => GetStandardizedType(i)).ToList();
+        List<StandardizedType> implementedInterfaces = wrap.Type.GetInterfaces().Select(GetStandardizedType).ToList();
 
         // we might have wrapped the base class (for example FileStream extends Stream which is wrapped), so check if we did and add it
         Type? baseClass = wrap.Type.BaseType;
@@ -46,7 +46,8 @@ internal class SingleClassSourceGenerator
 
         if (implementedInterfaces.Count != 0)
         {
-            interfaceStr.Append(" : " + string.Join(", ", implementedInterfaces.Select(st => st.Interface ?? st.Name))); // TODO: handle generic interfaces
+            // TODO: handle generic interfaces
+            interfaceStr.Append(" : " + string.Join(", ", implementedInterfaces.Select(st => st.Interface ?? st.Name)));
             foreach (StandardizedType t in implementedInterfaces)
             {
                 if (t.Namespace != null) usings.Add(t.Namespace);
@@ -54,16 +55,16 @@ internal class SingleClassSourceGenerator
         }
 
         interfaceStr.AppendLine(" {");
-        string wrappedTypeName = StandardizedType.UseType(true);
+        string wrappedTypeName = standardizedType.UseType(true);
 
         classStr.AppendLine(
             $"public class {wrap.ClassNameToGenerate}{topLevelGenerics} : {wrap.InterfaceNameToGenerate}{topLevelGenerics} {{");
         if (!wrap.IsStatic)
         {
-            interfaceStr.AppendLine($"\t{wrappedTypeName} {WrappedProperty} {{ get; }}");
+            interfaceStr.AppendLine($"\t{wrappedTypeName} {wrappedProperty} {{ get; }}");
 
             classStr.AppendLine($"\tprivate readonly {wrappedTypeName} inner;");
-            classStr.AppendLine($"public {wrappedTypeName} {WrappedProperty} => inner;");
+            classStr.AppendLine($"\tpublic {wrappedTypeName} {wrappedProperty} => inner;");
 
             Type? walkUp = wrap.Type.BaseType;
             while (walkUp != null)
@@ -80,6 +81,7 @@ internal class SingleClassSourceGenerator
             classStr.AppendLine();
             GenerateProperties(implementedInterfaces);
             classStr.AppendLine();
+            GenerateEvents(implementedInterfaces);
         }
 
         GenerateMethods(implementedInterfaces);
@@ -105,7 +107,7 @@ internal class SingleClassSourceGenerator
     private void GenerateConstructors()
     {
         // add the wrap constructor.  all other constructors will call this
-        string innerTypeStr = StandardizedType.UseType(true);
+        string innerTypeStr = standardizedType.UseType(true);
         classStr.AppendLine($@"	public {wrap.ClassNameToGenerate}({innerTypeStr} inner) {{
 		this.inner = inner;
 	}}");
@@ -146,14 +148,16 @@ internal class SingleClassSourceGenerator
         BindingFlags staticOrInstance = wrap.IsStatic ? BindingFlags.Static : BindingFlags.Instance;
         MethodInfo[] methods = wrap.Type.GetMethods(staticOrInstance | BindingFlags.Public);
         var props = wrap.Type.GetProperties();
+        var events = wrap.Type.GetEvents();
 
         foreach (MethodInfo method in methods)
         {
             if (methodsToSkip.Any(m => m.DeclaringType == method.DeclaringType && m.Name == method.Name)) 
                 continue;
 
-            // skip methods that are part of properties
+            // skip methods that are part of properties or events
             if (props.Any(p => p.GetMethod == method | p.SetMethod == method)) continue;
+            if (events.Any(e => e.AddMethod == method || e.RemoveMethod == method)) continue;
 
             // use a dummy StringBuilder if the declaring type is not this type so we don't redeclare methods
             // on the interface
@@ -316,46 +320,15 @@ internal class SingleClassSourceGenerator
         }
 
         return toRet;
-        /*foreach (ConstructorInfo ctor in a.GetType().GetConstructors(BindingFlags.Instance | BindingFlags.Public))
-        {
-            bool thisCtorWorks = true;
-            ParameterInfo[] ctorParams = ctor.GetParameters();
-            foreach (PropertyInfo prop in attrProps)
-            {
-                if (prop.DeclaringType == typeof(Attribute) || prop.DeclaringType == typeof(object)) continue;
-                object? defaultValue = prop.PropertyType.IsValueType ? Activator.CreateInstance(prop.PropertyType) : null;
-                object? value = prop.GetValue(a);
-                if (Equals(defaultValue, value)) continue;  // value doesn't need to be given in ctor
-                thisCtorWorks = false; // this won't work unless we find a valid parameter
-                foreach (ParameterInfo ctorParam in ctorParams)
-                {
-                    if (ctorParam.ParameterType == prop.PropertyType &&
-                        ctorParam.Name.Equals(prop.Name, StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        thisCtorWorks = true; // found a valid one!
-                        break;
-                    }
-                }
-
-                if (!thisCtorWorks) break;
-            }
-
-            if (thisCtorWorks) return ctor;
-        }
-
-        return null;
-        */
     }
 
     private class AttributePropertyInfo
     {
-        public string Name { get; set; }
-        public PropertyInfo Property { get; set; }
-        public object? Value { get; set; }
+        public PropertyInfo Property { get; }
+        public object? Value { get; }
 
-        public AttributePropertyInfo(string name, PropertyInfo property, object? value)
+        public AttributePropertyInfo(PropertyInfo property, object? value)
         {
-            Name     = name;
             Property = property;
             Value    = value;
         }
@@ -373,7 +346,7 @@ internal class SingleClassSourceGenerator
             object? value = p.GetValue(a);
             if (!Equals(defaultValue, value))
             {
-                ret[p.Name] = new(p.Name, p, value);
+                ret[p.Name] = new(p, value);
             }
         }
 
@@ -468,6 +441,15 @@ internal class SingleClassSourceGenerator
         }
         return false;
     }
+    private static bool IsFromTypes(EventInfo ev, List<StandardizedType> types)
+    {
+        foreach (StandardizedType type in types)
+        {
+            EventInfo? otherEvent = type.Original.GetEvent(ev.Name);
+            if (otherEvent != null) return true;
+        }
+        return false;
+    }
 
     private string GenerateMethodGenericParamString(MethodInfo method)
     {
@@ -508,12 +490,43 @@ internal class SingleClassSourceGenerator
 
             if (property.SetMethod != null && property.SetMethod.IsPublic)
             {
-                string rValue = needsWrap ? $"value.{WrappedProperty}" : "value";
+                string rValue = needsWrap ? $"value.Wrapped{propType.UseType(true)}" : "value";
                 interStr.Append("set; ");
                 classStr.AppendLine($"\t\tset => inner.{property.Name} = {rValue}; ");
             }
 
             interStr.AppendLine("}");
+            classStr.AppendLine("\t}");
+        }
+    }
+
+    private void GenerateEvents(List<StandardizedType> implementedInterfaces)
+    {
+        EventInfo[] events = wrap.Type.GetEvents();
+        foreach (EventInfo ev in events)
+        {
+            StringBuilder interStr = interfaceStr;
+            if (IsFromTypes(ev, implementedInterfaces)) interStr = new StringBuilder();
+
+            StandardizedType eventHandlerType = GetStandardizedType(ev.EventHandlerType);
+            bool needsWrap = eventHandlerType.IsWrapped;
+            AddUsing(eventHandlerType);
+
+            string typeStr = eventHandlerType.UseType();
+
+            interStr.AppendLine($"\tpublic event {typeStr} {ev.Name}; ");
+            classStr.AppendLine($"\tpublic event {typeStr} {ev.Name} {{ ");
+
+            if (ev.AddMethod != null && ev.AddMethod.IsPublic)
+            {
+                classStr.AppendLine($"\t\tadd {{ inner.{ev.Name} += value; }}");
+            }
+
+            if (ev.RemoveMethod != null && ev.RemoveMethod.IsPublic)
+            {
+                classStr.AppendLine($"\t\tremove {{ inner.{ev.Name} -= value; }}");
+            }
+
             classStr.AppendLine("\t}");
         }
     }
@@ -561,11 +574,5 @@ internal class SingleClassSourceGenerator
         }
 
         return new StandardizedType(type, ns, cName, iName, parameterized, eWrap != null, type.IsArray);
-    }
-
-    private record ClassName(string? Namespace, string Name)
-    {
-        public string? Namespace { get; } = Namespace;
-        public string Name { get; } = Name;
     }
 }

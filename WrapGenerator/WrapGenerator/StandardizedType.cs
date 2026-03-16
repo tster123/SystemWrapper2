@@ -65,13 +65,4 @@ internal record StandardizedType
         [typeof(uint)]   = new StandardizedType(typeof(uint), null, "uint", null, null),
         [typeof(ulong)]  = new StandardizedType(typeof(ulong), null, "ulong", null, null),
     };
-
-    public void Deconstruct(out Type Original, out string? Namespace, out string Name, out string? Interface, out StandardizedType[]? ParameterizedTypes)
-    {
-        Original           = this.Original;
-        Namespace          = this.Namespace;
-        Name               = this.Name;
-        Interface          = this.Interface;
-        ParameterizedTypes = this.ParameterizedTypes;
-    }
 }
