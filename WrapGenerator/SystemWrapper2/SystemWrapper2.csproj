@@ -1,24 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-	  <!--
-	  <TargetFrameworks>net10.0;net48</TargetFrameworks>
-	  -->
-	  <TargetFrameworks>net10.0</TargetFrameworks>
+    <TargetFrameworks>net10.0;net48</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
-	<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <LangVersion>14.0</LangVersion>
   </PropertyGroup>
 
-	<ItemGroup>
-        <AdditionalFiles Include="Namespaces.xml" />
-	</ItemGroup>
+  <ItemGroup>
+    <AdditionalFiles Include="Namespaces.xml" />
+  </ItemGroup>
 
-	<ItemGroup>
-	  <ProjectReference Include="..\WrapGenerator\WrapGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-	</ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\WrapGenerator\WrapGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
 
-	<PropertyGroup>
-		<NoWarn>3010,0618,CA1416</NoWarn>
-	</PropertyGroup>
+  <PropertyGroup>
+    <NoWarn>3010,0618,CA1416</NoWarn>
+  </PropertyGroup>
 </Project>

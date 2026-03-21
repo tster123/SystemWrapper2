@@ -2,4 +2,5 @@
   <Project Path="SystemWrapper2/SystemWrapper2.csproj" />
   <Project Path="WrapGenerator/WrapGenerator.csproj" />
   <Project Path="WrapGeneratorTest/WrapGeneratorTest.csproj" Id="682aa84c-60a7-4135-8c13-eb1508594dca" />
+  <Project Path="WrapGeneratorTestNetFramework/WrapGeneratorTestNetFramework.csproj" Id="37f7b59d-bf8e-4775-a533-6e42ba8b2fcb" />
 </Solution>

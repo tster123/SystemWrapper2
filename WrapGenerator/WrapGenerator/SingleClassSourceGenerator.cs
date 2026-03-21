@@ -57,8 +57,7 @@ internal class SingleClassSourceGenerator
         interfaceStr.AppendLine(" {");
         string wrappedTypeName = standardizedType.UseType(true);
 
-        classStr.AppendLine(
-            $"public class {wrap.ClassNameToGenerate}{topLevelGenerics} : {wrap.InterfaceNameToGenerate}{topLevelGenerics} {{");
+        classStr.AppendLine($"public class {wrap.ClassNameToGenerate}{topLevelGenerics} : {wrap.InterfaceNameToGenerate}{topLevelGenerics} {{");
         if (!wrap.IsStatic)
         {
             interfaceStr.AppendLine($"\t{wrappedTypeName} {wrappedProperty} {{ get; }}");
@@ -113,6 +112,7 @@ internal class SingleClassSourceGenerator
 	}}");
 
         ConstructorInfo[] ctors = wrap.Type.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+        Array.Sort(ctors, MethodComparer);
         foreach (ConstructorInfo ctor in ctors)
         {
             ParameterInfo[] parameters = ctor.GetParameters();
@@ -138,6 +138,25 @@ internal class SingleClassSourceGenerator
         }
     }
 
+    private int MethodComparer(MethodBase x, MethodBase y)
+    {
+        int r = StringComparer.Ordinal.Compare(x.Name, y.Name);
+        if (r != 0) return r;
+        ParameterInfo[] xp = x.GetParameters();
+        ParameterInfo[] yp = y.GetParameters();
+        if (xp.Length < yp.Length) return -1;
+        if (xp.Length > yp.Length) return 1;
+        for (int i = 0; i < xp.Length; i++)
+        {
+            string xpn = xp[i].ParameterType.ToString();
+            string ypn = yp[i].ParameterType.ToString();
+            r = StringComparer.Ordinal.Compare(xpn, ypn);
+            if (r != 0) return r;
+        }
+
+        return 0;
+    }
+
     private static readonly List<MethodInfo> methodsToSkip =
     [
         typeof(object).GetMethod("GetType")
@@ -147,6 +166,7 @@ internal class SingleClassSourceGenerator
     {
         BindingFlags staticOrInstance = wrap.IsStatic ? BindingFlags.Static : BindingFlags.Instance;
         MethodInfo[] methods = wrap.Type.GetMethods(staticOrInstance | BindingFlags.Public);
+        Array.Sort(methods, MethodComparer);
         var props = wrap.Type.GetProperties();
         var events = wrap.Type.GetEvents();
 
@@ -235,6 +255,7 @@ internal class SingleClassSourceGenerator
     {
         string name = a.GetType().Name;
         if (a.GetType().Namespace == "System.Runtime.CompilerServices") return null;
+        if (name == "__DynamicallyInvokableAttribute") return null;
         AddUsing(factory.GetStandardizedType(a.GetType()));
         if (name.EndsWith("Attribute")) name = name.Substring(0, name.Length - "Attribute".Length);
         Dictionary<string, AttributePropertyInfo> attrProps = GetAttributePropertiesWithNonDefaultValues(a);

@@ -7,7 +7,7 @@ namespace WrapGeneratorTest;
 public class TestAdditionalText(string path, string text) : AdditionalText
 {
     public override string Path { get; } = path;
-    public override SourceText? GetText(CancellationToken cancellationToken = new())
+    public override SourceText GetText(CancellationToken cancellationToken = new())
     {
         return SourceText.From(text);
     }
@@ -47,7 +47,6 @@ public sealed class Test1
     [TestMethod]
     public void SystemIoTest()
     {
-        FileSystemWatcher w = new FileSystemWatcher();
         SourceGenerator gen = new();
         TestSourceGeneratorContext context = new TestSourceGeneratorContext(new()
         {
@@ -65,7 +64,6 @@ public sealed class Test1
     [TestMethod]
     public void SystemDiagnosticsTest()
     {
-        FileSystemWatcher w = new FileSystemWatcher();
         SourceGenerator gen = new();
         TestSourceGeneratorContext context = new TestSourceGeneratorContext(new()
         {

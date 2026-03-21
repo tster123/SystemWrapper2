@@ -56,8 +56,6 @@ internal class GenRegistrar
         }
         foreach (Type t in a.GetTypes())
         {
-            string name = t.Name;
-            
             if (t == typeof(FileSystemWatcher))
             {
                 Console.WriteLine("foo");
