@@ -1,14 +1,10 @@
-﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Text;
-using WrapGenerator;
+﻿using WrapGenerator;
 using WrapGeneratorTest.TestClasses;
 
 namespace WrapGeneratorTest;
 
-
-
 [TestClass]
-public sealed class Test1
+public sealed class SingleClassSourceGeneratorTest
 {
     private static readonly WrapNamespace wrapNs = new()
     {
