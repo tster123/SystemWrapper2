@@ -12,6 +12,7 @@ internal record StandardizedType
         string name,
         string? interfaceName,
         StandardizedType[]? parameterizedTypes,
+        TypeFactory? factory,
         bool isWrapped = false,
         bool isArray = false)
     {
@@ -20,6 +21,7 @@ internal record StandardizedType
         Name               = name;
         Interface          = interfaceName;
         ParameterizedTypes = parameterizedTypes;
+        Factory            = factory;
         IsWrapped          = isWrapped;
         IsArray            = isArray;
     }
@@ -31,6 +33,7 @@ internal record StandardizedType
     public StandardizedType[]? ParameterizedTypes { get; }
     public bool IsWrapped { get; }
     public bool IsArray { get; }
+    public TypeFactory? Factory { get; }
 
     public string UseType(bool useInner = false, bool forceClass = false)
     {
@@ -50,19 +53,31 @@ internal record StandardizedType
         return name;
     }
 
-    public static Dictionary<Type, StandardizedType> Common = new()
+    //public string WrapMethodCode()
+
+    //private bool needsWrapMethod = false;
+
+    public string WrapRValueCode(string rValue)
     {
-        [typeof(void)]   = new StandardizedType(typeof(void), null, "void", null, null),
-        [typeof(int)]    = new StandardizedType(typeof(int), null, "int", null, null),
-        [typeof(long)]   = new StandardizedType(typeof(long), null, "long", null, null),
-        [typeof(short)]  = new StandardizedType(typeof(short), null, "short", null, null),
-        [typeof(double)] = new StandardizedType(typeof(double), null, "double", null, null),
-        [typeof(float)]  = new StandardizedType(typeof(float), null, "float", null, null),
-        [typeof(string)] = new StandardizedType(typeof(string), null, "string", null, null),
-        [typeof(byte)]   = new StandardizedType(typeof(byte), null, "byte", null, null),
-        [typeof(bool)]   = new StandardizedType(typeof(bool), null, "bool", null, null),
-        [typeof(ushort)] = new StandardizedType(typeof(ushort), null, "ushort", null, null),
-        [typeof(uint)]   = new StandardizedType(typeof(uint), null, "uint", null, null),
-        [typeof(ulong)]  = new StandardizedType(typeof(ulong), null, "ulong", null, null),
-    };
+        if (IsWrapped)
+        {
+            if (IsArray)
+            {
+                return $"WrapHelpers.WrapArray({rValue}, e => new {UseType(forceClass: true)}(e)";
+            }
+            return $"{rValue} is {Original.Name} _r ? new {UseType(forceClass: true)}(_r) : ";
+        }
+
+        Type[] paramTypes = Original.GetGenericArguments();
+        if (Name.StartsWith("IEnumerable"))
+        {
+            StandardizedType iEnumType = Factory!.GetStandardizedType(paramTypes[0]);
+            if (iEnumType.IsWrapped)
+            {
+                return $"{rValue}.Select(e => new {iEnumType.UseType(forceClass: true)}(e))";
+            }
+        }
+
+        return rValue;
+    }
 }

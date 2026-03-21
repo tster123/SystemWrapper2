@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -10,19 +9,19 @@ namespace WrapGenerator;
 //TODO - do events properly
 internal class SingleClassSourceGenerator
 {
-    private readonly GenRegistrar registrar;
     private readonly ClassToWrap wrap;
     private readonly HashSet<string> usings = new();
     private readonly StringBuilder interfaceStr = new();
     private readonly StringBuilder classStr = new();
     private readonly string wrappedProperty;
     private readonly StandardizedType standardizedType;
+    private readonly TypeFactory factory;
 
-    public SingleClassSourceGenerator(GenRegistrar registrar, ClassToWrap wrap)
+    public SingleClassSourceGenerator(TypeFactory factory, ClassToWrap wrap)
     {
-        this.registrar = registrar;
+        this.factory = factory;
         this.wrap = wrap;
-        standardizedType = GetStandardizedType(wrap.Type);
+        standardizedType = factory.GetStandardizedType(wrap.Type);
         wrappedProperty = $"Wrapped{standardizedType.UseType(true)}";
     }
 
@@ -31,13 +30,13 @@ internal class SingleClassSourceGenerator
         usings.Add(wrap.Type.Namespace);
         string topLevelGenerics = wrap.ClassLevelGenericParameters == null ? "" : $"<{string.Join(", ", wrap.ClassLevelGenericParameters)}>";
         interfaceStr.Append($"public interface {wrap.InterfaceNameToGenerate}{topLevelGenerics}");
-        List<StandardizedType> implementedInterfaces = wrap.Type.GetInterfaces().Select(GetStandardizedType).ToList();
+        List<StandardizedType> implementedInterfaces = wrap.Type.GetInterfaces().Select(factory.GetStandardizedType).ToList();
 
         // we might have wrapped the base class (for example FileStream extends Stream which is wrapped), so check if we did and add it
         Type? baseClass = wrap.Type.BaseType;
         if (baseClass != null)
         {
-            StandardizedType st = GetStandardizedType(baseClass);
+            StandardizedType st = factory.GetStandardizedType(baseClass);
             if (st.IsWrapped && st.Interface != null)
             {
                 implementedInterfaces.Add(st);
@@ -69,7 +68,7 @@ internal class SingleClassSourceGenerator
             Type? walkUp = wrap.Type.BaseType;
             while (walkUp != null)
             {
-                StandardizedType baseType = GetStandardizedType(walkUp);
+                StandardizedType baseType = factory.GetStandardizedType(walkUp);
                 if (baseType.IsWrapped)
                 {
                     classStr.AppendLine($"\tpublic {baseType.UseType(true)} Wrapped{baseType.UseType(true)} => inner;");
@@ -177,9 +176,9 @@ internal class SingleClassSourceGenerator
                 interStr.Append(attrStr);
                 classStr.Append(attrStr);
             }
-            StandardizedType retType = GetStandardizedType(method.ReturnType);
+            StandardizedType retType = factory.GetStandardizedType(method.ReturnType);
             AddUsing(retType);
-            string overrideStr = IsFromTypes(method, [GetStandardizedType(typeof(object))]) ? "override " : "";
+            string overrideStr = IsFromTypes(method, [factory.GetStandardizedType(typeof(object))]) ? "override " : "";
             string methodGenericParamString = GenerateMethodGenericParamString(method);
             string retTypeStr = retType.UseType();
             interStr.Append($"\tpublic {retTypeStr} {method.Name}{methodGenericParamString}(");
@@ -235,7 +234,7 @@ internal class SingleClassSourceGenerator
     {
         string name = a.GetType().Name;
         if (a.GetType().Namespace == "System.Runtime.CompilerServices") return null;
-        AddUsing(GetStandardizedType(a.GetType()));
+        AddUsing(factory.GetStandardizedType(a.GetType()));
         if (name.EndsWith("Attribute")) name = name.Substring(0, name.Length - "Attribute".Length);
         Dictionary<string, AttributePropertyInfo> attrProps = GetAttributePropertiesWithNonDefaultValues(a);
 
@@ -296,7 +295,7 @@ internal class SingleClassSourceGenerator
             }
             else if (valType.IsEnum)
             {
-                AddUsing(GetStandardizedType(valType));
+                AddUsing(factory.GetStandardizedType(valType));
                 strVal = $"{valType.Name}.{strVal}";
             }
         }
@@ -360,7 +359,7 @@ internal class SingleClassSourceGenerator
         {
             paramT = paramT.GetElementType()!;
         }
-        StandardizedType paramType = GetStandardizedType(paramT);
+        StandardizedType paramType = factory.GetStandardizedType(paramT);
         AddUsing(paramType);
         string paramTypeStr = paramType.UseType();
         string declaration = "";
@@ -386,16 +385,16 @@ internal class SingleClassSourceGenerator
         {
             if (type.IsArray)
             {
-                StandardizedType itemType = GetStandardizedType(type.Original.GetElementType()!);
-                return $"{rValue}.Select(e => new {itemType.UseType(forceClass: true)}(e)).ToArray()";
+                StandardizedType itemType = factory.GetStandardizedType(type.Original.GetElementType()!);
+                return $"{rValue} is {type.Original.Name}[] _r ? _r.Select(e => new {itemType.UseType(forceClass: true)}(e)).ToArray() : null";
             }
-            return $"new {type.UseType(forceClass: true)}({rValue})";
+            return $"{rValue} is {type.Original.Name} _r ? new {type.UseType(forceClass: true)}(_r) : ";
         }
 
         Type[] paramTypes = type.Original.GetGenericArguments();
         if (type.Name.StartsWith("IEnumerable"))
         {
-            StandardizedType iEnumType = GetStandardizedType(paramTypes[0]);
+            StandardizedType iEnumType = factory.GetStandardizedType(paramTypes[0]);
             if (iEnumType.IsWrapped)
             {
                 return $"{rValue}.Select(e => new {iEnumType.UseType(forceClass: true)}(e))";
@@ -466,7 +465,7 @@ internal class SingleClassSourceGenerator
             StringBuilder interStr = interfaceStr;
             if (IsFromTypes(property, implementedInterfaces)) interStr = new StringBuilder();
 
-            StandardizedType propType = GetStandardizedType(property.PropertyType);
+            StandardizedType propType = factory.GetStandardizedType(property.PropertyType);
             bool needsWrap = propType.IsWrapped;
             AddUsing(propType);
 
@@ -508,7 +507,7 @@ internal class SingleClassSourceGenerator
             StringBuilder interStr = interfaceStr;
             if (IsFromTypes(ev, implementedInterfaces)) interStr = new StringBuilder();
 
-            StandardizedType eventHandlerType = GetStandardizedType(ev.EventHandlerType);
+            StandardizedType eventHandlerType = factory.GetStandardizedType(ev.EventHandlerType);
             bool needsWrap = eventHandlerType.IsWrapped;
             AddUsing(eventHandlerType);
 
@@ -534,45 +533,5 @@ internal class SingleClassSourceGenerator
     private void AddUsing(StandardizedType type)
     {
         if (type.Namespace != null && type.Namespace != wrap.TargetNamespace) usings.Add(type.Namespace);
-    }
-
-    private StandardizedType GetStandardizedType(Type type)
-    {
-        if (StandardizedType.Common.TryGetValue(type, out StandardizedType r)) return r;
-        Type eType = type;
-        if (type.IsArray)
-        {
-            Type? e = type.GetElementType();
-            Debug.Assert(e != null);
-            eType = e!;
-        }
-        ClassToWrap? eWrap = registrar.GetWrap(eType);
-
-        StandardizedType[]? parameterized;
-        string cName;
-        string? iName;
-        string? ns = type.Namespace;
-        if (eWrap != null) ns = eWrap.TargetNamespace;
-
-        Type[] generics = type.GenericTypeArguments;
-        if (generics.Length == 0 && type.IsGenericType)
-        {
-            var t1 = type.GetGenericTypeDefinition();
-            generics = t1.GetGenericArguments();
-        }
-        if (generics.Length == 0)
-        {
-            parameterized = null;
-            cName = eWrap == null ? type.Name : eWrap.ClassNameToGenerate;
-            iName = eWrap?.InterfaceNameToGenerate;
-        }
-        else
-        {
-            parameterized = generics.Select(GetStandardizedType).ToArray();
-            cName = (eWrap == null ? type.Name : eWrap.ClassNameToGenerate).Split('`').First();
-            iName = eWrap?.InterfaceNameToGenerate.Split('`').First();
-        }
-
-        return new StandardizedType(type, ns, cName, iName, parameterized, eWrap != null, type.IsArray);
     }
 }

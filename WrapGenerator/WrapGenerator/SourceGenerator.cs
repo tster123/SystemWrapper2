@@ -69,10 +69,11 @@ public class SourceGenerator : ISourceGenerator
                 });
             }
         }
-        
+
+        TypeFactory factory = new(registrar);
         foreach (ClassToWrap wrap in registrar.AllClassesToWrap)
         {
-            SingleClassSourceGenerator generator = new(registrar, wrap);
+            SingleClassSourceGenerator generator = new(factory, wrap);
             string code = generator.GeneratorSource();
             context.AddSource(wrap.TargetNamespace.Replace('.', '/') + "/" + wrap.ClassNameToGenerate + ".cs", code);
         }
