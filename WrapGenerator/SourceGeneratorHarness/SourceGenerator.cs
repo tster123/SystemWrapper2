@@ -5,8 +5,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Xml.Linq;
 using System.Xml.XPath;
+using WrapGenerator;
 
-namespace WrapGenerator;
+namespace SourceGeneratorHarness;
 
 public interface ISourceGeneratorContext
 {

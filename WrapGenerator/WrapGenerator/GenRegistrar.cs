@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace WrapGenerator;
 
-internal class GenRegistrar
+public class GenRegistrar
 {
     private readonly List<ClassToWrap> classesToWrap = new();
 

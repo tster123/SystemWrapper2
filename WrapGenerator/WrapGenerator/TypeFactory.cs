@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace WrapGenerator;
 
-internal class TypeFactory
+public class TypeFactory
 {
     private readonly GenRegistrar registrar;
 

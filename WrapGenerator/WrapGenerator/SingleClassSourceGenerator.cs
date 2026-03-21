@@ -7,7 +7,7 @@ using System.Text;
 namespace WrapGenerator;
 
 //TODO - do events properly
-internal class SingleClassSourceGenerator
+public class SingleClassSourceGenerator
 {
     private readonly ClassToWrap wrap;
     private readonly HashSet<string> usings = new();
@@ -138,8 +138,17 @@ internal class SingleClassSourceGenerator
         }
     }
 
+    private int DistanceToRoot(Type? t)
+    {
+        if (t == null || t == typeof(object) || t == typeof(void) || t.BaseType == null) return 0;
+        return 1 + DistanceToRoot(t.BaseType);
+    }
+
     private int MethodComparer(MethodBase x, MethodBase y)
     {
+        int xd = DistanceToRoot(x.DeclaringType);
+        int yd = DistanceToRoot(y.DeclaringType);
+        if (xd != yd) return yd - xd;
         int r = StringComparer.Ordinal.Compare(x.Name, y.Name);
         if (r != 0) return r;
         ParameterInfo[] xp = x.GetParameters();

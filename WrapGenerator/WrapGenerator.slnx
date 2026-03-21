@@ -1,4 +1,7 @@
 <Solution>
+  <Project Path="IncrementalGeneratorHarness/IncrementalGeneratorHarness.csproj" Id="1f170f17-9323-442f-a90e-d8b58211e128" />
+  <Project Path="SourceGeneratorHarness/SourceGeneratorHarness.csproj" Id="5307d16c-467a-4ecb-b84b-7b479a0a99b6" />
+  <Project Path="SourceGeneratorHarnessTest/SourceGeneratorHarnessTest.csproj" Id="be9a1e44-aef5-4c95-a491-f9427f0c2af0" />
   <Project Path="SystemWrapper2/SystemWrapper2.csproj" />
   <Project Path="WrapGenerator/WrapGenerator.csproj" />
   <Project Path="WrapGeneratorTest/WrapGeneratorTest.csproj" Id="682aa84c-60a7-4135-8c13-eb1508594dca" />

@@ -1,8 +1,7 @@
-﻿using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
-using System;
-using System.Collections.Generic;
-using System.Runtime.Versioning;
-using System.Text;
+﻿using System.Runtime.Versioning;
+// ReSharper disable UnusedMember.Global
+// unused because it's all used with reflection
+
 #pragma warning disable CS0067 // Event is never used
 
 namespace WrapGeneratorTest.TestClasses;

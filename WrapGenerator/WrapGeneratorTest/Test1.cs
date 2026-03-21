@@ -1,39 +1,11 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 using WrapGenerator;
+using WrapGeneratorTest.TestClasses;
 
 namespace WrapGeneratorTest;
 
-public class TestAdditionalText(string path, string text) : AdditionalText
-{
-    public override string Path { get; } = path;
-    public override SourceText GetText(CancellationToken cancellationToken = new())
-    {
-        return SourceText.From(text);
-    }
-}
 
-public class TestSourceGeneratorContext : ISourceGeneratorContext
-{
-    public CancellationToken CancellationToken { get; }
-    public IEnumerable<AdditionalText> AdditionalFiles { get; }
-
-    public Dictionary<string, string> SourcesAdded = new();
-    public void AddSource(string hintPath, string source)
-    {
-        if (SourcesAdded.ContainsKey(hintPath))
-        {
-            Assert.Fail($"Adding source a second time: [{hintPath}]");
-        }
-        SourcesAdded[hintPath] = source;
-    }
-
-    public TestSourceGeneratorContext(Dictionary<string, string> sourceFiles)
-    {
-        CancellationToken = CancellationToken.None;
-        AdditionalFiles = sourceFiles.Select(kvp => new TestAdditionalText(kvp.Key, kvp.Value));
-    }
-}
 
 [TestClass]
 public sealed class Test1
@@ -44,50 +16,21 @@ public sealed class Test1
         TargetNamespaceFormat = "Wrapped.TestClasses"
     };
 
-    [TestMethod]
-    public void SystemIoTest()
+    private void DoTest(Type toWrap, Type[] otherToRegister, string? expected)
     {
-        SourceGenerator gen = new();
-        TestSourceGeneratorContext context = new TestSourceGeneratorContext(new()
-        {
-            ["Namespaces.xml"] = @"<?xml version=""1.0"" encoding=""utf-8"" ?>
-<Generate>
-	<Namespace Namespace=""System.IO"" TargetNamespaceFormat=""Wrapped.System.IO"" />
-<Namespace Namespace=""System.Diagnostics"" TargetNamespaceFormat=""Wrapped.System.Diagnostics""
-		   IncludeOnly=""^(Process)|(ProcessStartInfo)$"" />
-</Generate>"
-        });
-        gen.Execute(context);
-        Console.WriteLine(context.SourcesAdded["Wrapped/System/IO/FileSystemWatcherWrap.cs"]);
-    }
+        GenRegistrar registrar = new();
+        ClassToWrap wrap = new(toWrap, wrapNs);
+        registrar.Register(wrap);
 
-    [TestMethod]
-    public void SystemDiagnosticsTest()
-    {
-        SourceGenerator gen = new();
-        TestSourceGeneratorContext context = new TestSourceGeneratorContext(new()
+        foreach (Type other in otherToRegister)
         {
-            ["Namespaces.xml"] = @"<?xml version=""1.0"" encoding=""utf-8"" ?>
-<Generate>
-	<Namespace Namespace=""System.Diagnostics"" TargetNamespaceFormat=""Wrapped.System.Diagnostics"" />
-</Generate>"
-        });
-        gen.Execute(context);
-        Console.WriteLine(context.SourcesAdded["Wrapped/System/Diagnostics/ProcessWrap.cs"]);
-    }
+            ClassToWrap otherWrap = new(other, wrapNs);
+            registrar.Register(otherWrap);
+        }
 
-    private void DoTestWithMultiple(string className, string? expected)
-    {
-        SourceGenerator gen = new();
-        TestSourceGeneratorContext context = new TestSourceGeneratorContext(new()
-        {
-            ["Namespaces.xml"] = @"<?xml version=""1.0"" encoding=""utf-8"" ?>
-<Generate>
-	<Namespace Namespace=""WrapGeneratorTest.TestClasses"" TargetNamespaceFormat=""Wrapped.System.IO"" />
-</Generate>"
-        });
-        gen.Execute(context);
-        string code = context.SourcesAdded[$"Wrapped/System/IO/{className}Wrap.cs"];
+        TypeFactory factory = new(registrar);
+        SingleClassSourceGenerator generator = new(factory, wrap);
+        string code = generator.GeneratorSource();
         Console.WriteLine(code);
         if (expected != null)
         {
@@ -137,14 +80,14 @@ public class PropertyExampleWrap : IPropertyExampleWrap {
 		set => inner.Foo = value; 
 	}
 
-	public override string ToString() {
-		return inner.ToString();
-	}
 	public override bool Equals(Object obj) {
 		return inner.Equals(obj);
 	}
 	public override int GetHashCode() {
 		return inner.GetHashCode();
+	}
+	public override string ToString() {
+		return inner.ToString();
 	}
 }
 
@@ -178,14 +121,14 @@ public class ListExampleWrap : IListExampleWrap {
 	public List<string> Method(List<int> foo) {
 		return inner.Method(foo);
 	}
-	public override string ToString() {
-		return inner.ToString();
-	}
 	public override bool Equals(Object obj) {
 		return inner.Equals(obj);
 	}
 	public override int GetHashCode() {
 		return inner.GetHashCode();
+	}
+	public override string ToString() {
+		return inner.ToString();
 	}
 }
 
@@ -218,14 +161,14 @@ public class ArrayExampleWrap : IArrayExampleWrap {
 	public String[] Method(Int32[] foo) {
 		return inner.Method(foo);
 	}
-	public override string ToString() {
-		return inner.ToString();
-	}
 	public override bool Equals(Object obj) {
 		return inner.Equals(obj);
 	}
 	public override int GetHashCode() {
 		return inner.GetHashCode();
+	}
+	public override string ToString() {
+		return inner.ToString();
 	}
 }
 
@@ -258,14 +201,14 @@ public class NullableExampleWrap : INullableExampleWrap {
 	public Nullable<byte> Method(Nullable<int> foo) {
 		return inner.Method(foo);
 	}
-	public override string ToString() {
-		return inner.ToString();
-	}
 	public override bool Equals(Object obj) {
 		return inner.Equals(obj);
 	}
 	public override int GetHashCode() {
 		return inner.GetHashCode();
+	}
+	public override string ToString() {
+		return inner.ToString();
 	}
 }
 
@@ -275,11 +218,12 @@ public class NullableExampleWrap : INullableExampleWrap {
     [TestMethod]
     public void GenericTest()
     {
-        DoTestWithMultiple("GenericExample_T1_", @"
+        Console.WriteLine(typeof(GenericExample<>).Name);
+        DoTest(typeof(GenericExample<>), [], @"
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
 using System;
-namespace Wrapped.System.IO {
+namespace Wrapped.TestClasses {
 public interface IGenericExample_T1_Wrap<T1> {
 	GenericExample<T1> WrappedGenericExample<T1> { get; }
 	public T1 Method<T2>(T2 foo);
@@ -298,14 +242,14 @@ public class GenericExample_T1_Wrap<T1> : IGenericExample_T1_Wrap<T1> {
 	public T1 Method<T2>(T2 foo) {
 		return inner.Method(foo);
 	}
-	public override string ToString() {
-		return inner.ToString();
-	}
 	public override bool Equals(Object obj) {
 		return inner.Equals(obj);
 	}
 	public override int GetHashCode() {
 		return inner.GetHashCode();
+	}
+	public override string ToString() {
+		return inner.ToString();
 	}
 }
 
@@ -345,14 +289,14 @@ public class InterfaceExampleWrap : IInterfaceExampleWrap {
 	public void Foo() {
 		inner.Foo();
 	}
-	public override string ToString() {
-		return inner.ToString();
-	}
 	public override bool Equals(Object obj) {
 		return inner.Equals(obj);
 	}
 	public override int GetHashCode() {
 		return inner.GetHashCode();
+	}
+	public override string ToString() {
+		return inner.ToString();
 	}
 }
 
@@ -384,14 +328,14 @@ public class DisposableExampleWrap : IDisposableExampleWrap {
 	public void Dispose() {
 		inner.Dispose();
 	}
-	public override string ToString() {
-		return inner.ToString();
-	}
 	public override bool Equals(Object obj) {
 		return inner.Equals(obj);
 	}
 	public override int GetHashCode() {
 		return inner.GetHashCode();
+	}
+	public override string ToString() {
+		return inner.ToString();
 	}
 }
 
@@ -429,14 +373,14 @@ public class WrappingExampleWrap : IWrappingExampleWrap {
 	public PropertyExample[] MakeProperties(PropertyExample[] props) {
 		return inner.MakeProperties(props);
 	}
-	public override string ToString() {
-		return inner.ToString();
-	}
 	public override bool Equals(Object obj) {
 		return inner.Equals(obj);
 	}
 	public override int GetHashCode() {
 		return inner.GetHashCode();
+	}
+	public override string ToString() {
+		return inner.ToString();
 	}
 }
 
@@ -469,14 +413,14 @@ public class ArraySegmentExampleWrap : IArraySegmentExampleWrap {
 	public void Foo(out ArraySegment<byte> foo) {
 		inner.Foo(out foo);
 	}
-	public override string ToString() {
-		return inner.ToString();
-	}
 	public override bool Equals(Object obj) {
 		return inner.Equals(obj);
 	}
 	public override int GetHashCode() {
 		return inner.GetHashCode();
+	}
+	public override string ToString() {
+		return inner.ToString();
 	}
 }
 
@@ -509,14 +453,14 @@ public class OutExampleWrap : IOutExampleWrap {
 	public void Mork(out int a, out PropertyExample p) {
 		inner.Mork(out a, out p);
 	}
-	public override string ToString() {
-		return inner.ToString();
-	}
 	public override bool Equals(Object obj) {
 		return inner.Equals(obj);
 	}
 	public override int GetHashCode() {
 		return inner.GetHashCode();
+	}
+	public override string ToString() {
+		return inner.ToString();
 	}
 }
 
@@ -547,14 +491,14 @@ public class CtorExampleWrap : ICtorExampleWrap {
 		: this(new CtorExample(a, b, c)) { }
 
 
-	public override string ToString() {
-		return inner.ToString();
-	}
 	public override bool Equals(Object obj) {
 		return inner.Equals(obj);
 	}
 	public override int GetHashCode() {
 		return inner.GetHashCode();
+	}
+	public override string ToString() {
+		return inner.ToString();
 	}
 }
 
@@ -567,14 +511,11 @@ public class CtorExampleWrap : ICtorExampleWrap {
         DoTest("AttributesExample", @"
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
-using System;
 using System.Runtime.Versioning;
+using System;
 namespace Wrapped.TestClasses {
 public interface IAttributesExampleWrap {
 	AttributesExample WrappedAttributesExample { get; }
-	[Obsolete(message: null, error: false)]
-	[Example(boolean: true, anEnum: ExampleEnum.Buz, String1 = ""foo"", Integer = 1)]
-	public void Single();
 	[SupportedOSPlatform(platformName: ""windows"")]
 	[UnsupportedOSPlatform(platformName: ""linux"", message: null)]
 	[Obsolete(message: null, error: false)]
@@ -582,6 +523,9 @@ public interface IAttributesExampleWrap {
 	public void Double();
 	[Obsolete(message: ""This API supports obsolete formatter-based serialization. It should not be called or extended by application code."", error: false, DiagnosticId = ""SYSLIB0051"", UrlFormat = ""https://aka.ms/dotnet-warnings/{0}"")]
 	public void OldMethod();
+	[Obsolete(message: null, error: false)]
+	[Example(boolean: true, anEnum: ExampleEnum.Buz, String1 = ""foo"", Integer = 1)]
+	public void Single();
 }
 
 public class AttributesExampleWrap : IAttributesExampleWrap {
@@ -594,11 +538,6 @@ public class AttributesExampleWrap : IAttributesExampleWrap {
 		: this(new AttributesExample()) { }
 
 
-	[Obsolete(message: null, error: false)]
-	[Example(boolean: true, anEnum: ExampleEnum.Buz, String1 = ""foo"", Integer = 1)]
-	public void Single() {
-		inner.Single();
-	}
 	[SupportedOSPlatform(platformName: ""windows"")]
 	[UnsupportedOSPlatform(platformName: ""linux"", message: null)]
 	[Obsolete(message: null, error: false)]
@@ -610,14 +549,19 @@ public class AttributesExampleWrap : IAttributesExampleWrap {
 	public void OldMethod() {
 		inner.OldMethod();
 	}
-	public override string ToString() {
-		return inner.ToString();
+	[Obsolete(message: null, error: false)]
+	[Example(boolean: true, anEnum: ExampleEnum.Buz, String1 = ""foo"", Integer = 1)]
+	public void Single() {
+		inner.Single();
 	}
 	public override bool Equals(Object obj) {
 		return inner.Equals(obj);
 	}
 	public override int GetHashCode() {
 		return inner.GetHashCode();
+	}
+	public override string ToString() {
+		return inner.ToString();
 	}
 }
 
@@ -627,11 +571,11 @@ public class AttributesExampleWrap : IAttributesExampleWrap {
     [TestMethod]
     public void EventTest()
     {
-        DoTestWithMultiple("EventExample", @"
+        DoTest(typeof(EventExample), [typeof(ExampleEventArgs)], @"
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
 using System;
-namespace Wrapped.System.IO {
+namespace Wrapped.TestClasses {
 public interface IEventExampleWrap {
 	EventExample WrappedEventExample { get; }
 	public event EventHandler SimpleEvent; 
@@ -661,19 +605,20 @@ public class EventExampleWrap : IEventExampleWrap {
 		add { inner.WithCustomArgs += value; }
 		remove { inner.WithCustomArgs -= value; }
 	}
-	public override string ToString() {
-		return inner.ToString();
-	}
 	public override bool Equals(Object obj) {
 		return inner.Equals(obj);
 	}
 	public override int GetHashCode() {
 		return inner.GetHashCode();
 	}
+	public override string ToString() {
+		return inner.ToString();
+	}
 }
 
 }");
     }
+
 
     [TestMethod]
     public void StreamTest()

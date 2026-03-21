@@ -1,6 +1,6 @@
 ﻿namespace WrapGenerator;
 
-internal class WrapNamespace
+public class WrapNamespace
 {
     public string TargetNamespaceFormat { get; set; } = "{0}";
     public string WrapperClassNameFormat { get; set; } = "{0}Wrap";

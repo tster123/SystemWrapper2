@@ -3,14 +3,14 @@ using System.Linq;
 
 namespace WrapGenerator;
 
-internal record ClassToWrap
+public record ClassToWrap
 {
-    internal readonly Type Type;
-    internal readonly string TargetNamespace;
-    internal readonly string ClassNameToGenerate;
-    internal readonly string InterfaceNameToGenerate;
-    internal readonly string[]? ClassLevelGenericParameters;
-    internal bool IsStatic => Type.IsSealed && Type.IsAbstract;
+    public readonly Type Type;
+    public readonly string TargetNamespace;
+    public readonly string ClassNameToGenerate;
+    public readonly string InterfaceNameToGenerate;
+    public readonly string[]? ClassLevelGenericParameters;
+    public bool IsStatic => Type.IsSealed && Type.IsAbstract;
     public ClassToWrap(Type type,
         WrapNamespace wrapSettings)
     {
