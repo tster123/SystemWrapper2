@@ -16,14 +16,14 @@ internal record StandardizedType
         bool isWrapped = false,
         bool isArray = false)
     {
-        Original           = original;
-        Namespace          = namespaceName;
-        Name               = name;
-        Interface          = interfaceName;
+        Original = original;
+        Namespace = namespaceName;
+        Name = name;
+        Interface = interfaceName;
         ParameterizedTypes = parameterizedTypes;
-        Factory            = factory;
-        IsWrapped          = isWrapped;
-        IsArray            = isArray;
+        Factory = factory ?? new(new());
+        IsWrapped = isWrapped;
+        IsArray = isArray;
     }
 
     public Type Original { get; }
@@ -33,7 +33,7 @@ internal record StandardizedType
     public StandardizedType[]? ParameterizedTypes { get; }
     public bool IsWrapped { get; }
     public bool IsArray { get; }
-    public TypeFactory? Factory { get; }
+    public TypeFactory Factory { get; }
 
     public string UseType(bool useInner = false, bool forceClass = false)
     {
@@ -59,13 +59,15 @@ internal record StandardizedType
 
     public string WrapRValueCode(string rValue)
     {
+        if (Original == typeof(void)) return rValue;
         if (IsWrapped)
         {
             if (IsArray)
             {
-                return $"WrapHelpers.WrapArray({rValue}, e => new {UseType(forceClass: true)}(e)";
+                StandardizedType elemType = Factory.GetStandardizedType(Original.GetElementType()!);
+                return $"WrapHelpers.WrapArray({rValue}, e => new {elemType.UseType(forceClass: true)}(e))";
             }
-            return $"{rValue} is {Original.Name} _r ? new {UseType(forceClass: true)}(_r) : ";
+            return $"{rValue} is {Original.Name} _r ? new {UseType(forceClass: true)}(_r) : null";
         }
 
         Type[] paramTypes = Original.GetGenericArguments();
@@ -74,7 +76,7 @@ internal record StandardizedType
             StandardizedType iEnumType = Factory!.GetStandardizedType(paramTypes[0]);
             if (iEnumType.IsWrapped)
             {
-                return $"{rValue}.Select(e => new {iEnumType.UseType(forceClass: true)}(e))";
+                return $"WrapHelpers.WrapEnumerable({rValue}, e => new {iEnumType.UseType(forceClass: true)}(e))";
             }
         }
 

@@ -27,6 +27,7 @@ internal class SingleClassSourceGenerator
 
     public string GeneratorSource()
     {
+        usings.Add("SystemWrapper2");
         usings.Add(wrap.Type.Namespace);
         string topLevelGenerics = wrap.ClassLevelGenericParameters == null ? "" : $"<{string.Join(", ", wrap.ClassLevelGenericParameters)}>";
         interfaceStr.Append($"public interface {wrap.InterfaceNameToGenerate}{topLevelGenerics}");
@@ -209,7 +210,7 @@ internal class SingleClassSourceGenerator
             }
 
             string inner = wrap.IsStatic ? wrap.Type.Name : "inner";
-            string rValue = ConvertRValueToWrapped($"{inner}.{method.Name}({argList})", retType);
+            string rValue = retType.WrapRValueCode($"{inner}.{method.Name}({argList})");
             string formattedCall = string.Format(retFormat, rValue);
             classStr.AppendLine($"\t\t{formattedCall};");
             classStr.AppendLine("\t}");
@@ -376,32 +377,6 @@ internal class SingleClassSourceGenerator
         arg += param.Name;
         if (paramType.IsWrapped) arg += "." + $"Wrapped{paramType.UseType(true)}";
         return (declaration, arg);
-    }
-
-    private string ConvertRValueToWrapped(string rValue, StandardizedType type)
-    {
-        if (type.Original == typeof(void)) return rValue;
-        if (type.IsWrapped)
-        {
-            if (type.IsArray)
-            {
-                StandardizedType itemType = factory.GetStandardizedType(type.Original.GetElementType()!);
-                return $"{rValue} is {type.Original.Name}[] _r ? _r.Select(e => new {itemType.UseType(forceClass: true)}(e)).ToArray() : null";
-            }
-            return $"{rValue} is {type.Original.Name} _r ? new {type.UseType(forceClass: true)}(_r) : ";
-        }
-
-        Type[] paramTypes = type.Original.GetGenericArguments();
-        if (type.Name.StartsWith("IEnumerable"))
-        {
-            StandardizedType iEnumType = factory.GetStandardizedType(paramTypes[0]);
-            if (iEnumType.IsWrapped)
-            {
-                return $"{rValue}.Select(e => new {iEnumType.UseType(forceClass: true)}(e))";
-            }
-        }
-
-        return rValue;
     }
 
     private static bool IsFromTypes(MethodInfo method, List<StandardizedType> types)
