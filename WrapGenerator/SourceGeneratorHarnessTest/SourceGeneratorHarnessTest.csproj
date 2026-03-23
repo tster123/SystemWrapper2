@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SourceGeneratorHarness\SourceGeneratorHarness.csproj" />
+    <ProjectReference Include="..\WrapGenerator\WrapGenerator.csproj" />
   </ItemGroup>
 
   <ItemGroup>

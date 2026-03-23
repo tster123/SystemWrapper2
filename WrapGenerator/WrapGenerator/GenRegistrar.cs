@@ -10,6 +10,12 @@ namespace WrapGenerator;
 public class GenRegistrar
 {
     private readonly List<ClassToWrap> classesToWrap = new();
+    private readonly ISourceGeneratorContext context;
+
+    public GenRegistrar(ISourceGeneratorContext context)
+    {
+        this.context = context;
+    }
 
     public void Register(ClassToWrap toWrap)
     {
@@ -25,6 +31,15 @@ public class GenRegistrar
 
     public void Register(WrapNamespace nsWrap)
     {
+
+        foreach (Assembly a in context.Domain.GetAssemblies())
+        {
+            LoadAssembly(nsWrap, a);
+        }
+
+        
+
+        /*
         try
         {
             foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())
@@ -39,7 +54,7 @@ public class GenRegistrar
                 LoadAssembly(nsWrap, a);
             }
         }
-        
+        */
     }
 
     private void LoadAssembly(WrapNamespace nsWrap, Assembly a)

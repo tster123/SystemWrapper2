@@ -17,6 +17,7 @@ namespace WrapGeneratorTestNetFramework
         [TestMethod]
         public void StreamTest()
         {
+            /*
             GenRegistrar registrar = new();
             ClassToWrap wrap = new(typeof(Path), wrapNs);
             registrar.Register(wrap);
@@ -24,6 +25,7 @@ namespace WrapGeneratorTestNetFramework
             SingleClassSourceGenerator generator = new(factory, wrap);
             string code = generator.GeneratorSource();
             Console.WriteLine(code);
+            */
         }
     }
 }

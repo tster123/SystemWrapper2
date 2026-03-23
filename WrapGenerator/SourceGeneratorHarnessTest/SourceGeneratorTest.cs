@@ -1,7 +1,9 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Reflection;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 using SourceGeneratorHarness;
 using System.Text;
+using WrapGenerator;
 
 namespace SourceGeneratorHarnessTest;
 
@@ -30,8 +32,12 @@ public class TestSourceGeneratorContext : ISourceGeneratorContext
         SourcesAdded[hintPath] = source;
     }
 
+    public MetadataLoadContext Domain { get; }
+
     public TestSourceGeneratorContext(Dictionary<string, string> sourceFiles)
     {
+        string[] assemblyFiles = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.Location).ToArray();
+        Domain = new MetadataLoadContext(new PathAssemblyResolver(assemblyFiles));
         CancellationToken = CancellationToken.None;
         AdditionalFiles = sourceFiles.Select(kvp => new TestAdditionalText(kvp.Key, kvp.Value));
     }

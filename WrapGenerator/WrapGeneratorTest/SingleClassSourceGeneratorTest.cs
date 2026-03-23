@@ -1,11 +1,45 @@
-﻿using WrapGenerator;
+﻿using Microsoft.CodeAnalysis;
+using System.Reflection;
+using WrapGenerator;
 using WrapGeneratorTest.TestClasses;
 
 namespace WrapGeneratorTest;
 
+
+public class TestSourceGeneratorContext : ISourceGeneratorContext
+{
+    public IEnumerable<AdditionalText> AdditionalFiles { get; }
+    public CancellationToken CancellationToken => new(false);
+    public MetadataLoadContext Domain { get; }
+
+    public TestSourceGeneratorContext(MetadataLoadContext domain, IEnumerable<AdditionalText> additionalFiles)
+    {
+        Domain = domain;
+        AdditionalFiles = additionalFiles;
+    }
+
+    public Dictionary<string, string> SourceFiles = new();
+
+    public void AddSource(string hintName, string source) => SourceFiles[hintName] = source;
+}
+
 [TestClass]
 public sealed class SingleClassSourceGeneratorTest
 {
+    string[] assemblyFiles;
+    MetadataLoadContext loadContext;
+    TestSourceGeneratorContext testContext;
+    GenRegistrar registrar;
+
+    public SingleClassSourceGeneratorTest()
+    {
+        assemblyFiles = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.Location).Where(s => !string.IsNullOrEmpty(s)).ToArray();
+        loadContext = new(new PathAssemblyResolver(assemblyFiles));
+        testContext = new(loadContext, []);
+        registrar = new(testContext);
+    }
+
+
     private static readonly WrapNamespace wrapNs = new()
     {
         Namespace = "System.IO",
@@ -14,7 +48,6 @@ public sealed class SingleClassSourceGeneratorTest
 
     private void DoTest(Type toWrap, Type[] otherToRegister, string? expected)
     {
-        GenRegistrar registrar = new();
         ClassToWrap wrap = new(toWrap, wrapNs);
         registrar.Register(wrap);
 
@@ -36,7 +69,6 @@ public sealed class SingleClassSourceGeneratorTest
 
     private void DoTest(string className, string? expected)
     {
-        GenRegistrar registrar = new();
         ClassToWrap wrap = new(Type.GetType("WrapGeneratorTest.TestClasses." + className)!, wrapNs);
         registrar.Register(wrap);
         TypeFactory factory = new(registrar);
@@ -619,7 +651,6 @@ public class EventExampleWrap : IEventExampleWrap {
     [TestMethod]
     public void StreamTest()
     {
-        GenRegistrar registrar = new();
         ClassToWrap wrap = new(typeof(FileStream), wrapNs);
         registrar.Register(wrap);
         registrar.Register(new ClassToWrap(typeof(Stream), wrapNs));
@@ -632,7 +663,6 @@ public class EventExampleWrap : IEventExampleWrap {
     [TestMethod]
     public void FileSystemWatcherTest()
     {
-        GenRegistrar registrar = new();
         ClassToWrap wrap = new(typeof(FileSystemWatcher), wrapNs);
         registrar.Register(wrap);
         TypeFactory factory = new(registrar);

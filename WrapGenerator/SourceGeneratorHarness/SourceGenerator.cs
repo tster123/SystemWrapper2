@@ -1,7 +1,8 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
-using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Xml.Linq;
 using System.Xml.XPath;
@@ -9,23 +10,18 @@ using WrapGenerator;
 
 namespace SourceGeneratorHarness;
 
-public interface ISourceGeneratorContext
-{
-    public CancellationToken CancellationToken { get; }
-    public IEnumerable<AdditionalText> AdditionalFiles { get; }
-    public void AddSource(string hintPath, string source);
-}
-
 public class SourceGeneratorContext : ISourceGeneratorContext
 {
-    private GeneratorExecutionContext inner;
+    private readonly GeneratorExecutionContext inner;
 
     public IEnumerable<AdditionalText> AdditionalFiles => inner.AdditionalFiles;
     public CancellationToken CancellationToken => inner.CancellationToken;
+    public MetadataLoadContext Domain { get; }
 
-    public SourceGeneratorContext(GeneratorExecutionContext context)
+    public SourceGeneratorContext(GeneratorExecutionContext context, MetadataLoadContext domain)
     {
         inner = context;
+        Domain = domain;
     }
 
     public void AddSource(string hintName, string source) => inner.AddSource(hintName, source);
@@ -42,13 +38,30 @@ public class SourceGenerator : ISourceGenerator
 
     public void Execute(GeneratorExecutionContext context)
     {
-        Execute(new SourceGeneratorContext(context));
+        string s = "";
+        string[] allAssemblies = context.Compilation.References.Where(a => a != null).Select(a => a.Display!).ToArray();
+        var resolver = new PathAssemblyResolver(allAssemblies);
+        using (var loadContext = new MetadataLoadContext(resolver))
+        {
+            foreach (var assemblyFile in allAssemblies)
+            {
+                loadContext.LoadFromAssemblyPath(assemblyFile);
+            }
+            //Execute(new SourceGeneratorContext(context, loadContext));
+        }
+
+        /*foreach (MetadataReference a in context.Compilation.References)
+        {
+            Assembly.ReflectionOnlyLoadFrom(a.Display!);
+            s += a.Display + "\n";
+        }*/
+        context.AddSource("CompilationInfo.cs", $"/* {s} */");
     }
 
     public void Execute(ISourceGeneratorContext context)
     {
-        GenRegistrar registrar = new();
-        foreach (AdditionalText file in context.AdditionalFiles)
+        GenRegistrar registrar = new(context);
+        foreach (AdditionalText file in context.AdditionalFiles) 
         {
             SourceText? text = file.GetText(context.CancellationToken);
             if (text == null) continue;
@@ -78,5 +91,7 @@ public class SourceGenerator : ISourceGenerator
             string code = generator.GeneratorSource();
             context.AddSource(wrap.TargetNamespace.Replace('.', '/') + "/" + wrap.ClassNameToGenerate + ".cs", code);
         }
+
+        
     }
 }

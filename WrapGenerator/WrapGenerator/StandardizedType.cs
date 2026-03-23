@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace WrapGenerator;
 
-internal record StandardizedType
+public record StandardizedType
 {
     public StandardizedType(
         Type original,
@@ -12,7 +11,7 @@ internal record StandardizedType
         string name,
         string? interfaceName,
         StandardizedType[]? parameterizedTypes,
-        TypeFactory? factory,
+        ITypeFactory? factory,
         bool isWrapped = false,
         bool isArray = false)
     {
@@ -21,7 +20,7 @@ internal record StandardizedType
         Name = name;
         Interface = interfaceName;
         ParameterizedTypes = parameterizedTypes;
-        Factory = factory ?? new(new());
+        Factory = factory ?? new DummyTypeFactory();
         IsWrapped = isWrapped;
         IsArray = isArray;
     }
@@ -33,7 +32,7 @@ internal record StandardizedType
     public StandardizedType[]? ParameterizedTypes { get; }
     public bool IsWrapped { get; }
     public bool IsArray { get; }
-    public TypeFactory Factory { get; }
+    public ITypeFactory Factory { get; }
 
     public string UseType(bool useInner = false, bool forceClass = false)
     {

@@ -85,7 +85,7 @@ public class SingleClassSourceGenerator
 
         GenerateMethods(implementedInterfaces);
         StringBuilder s = new();
-        s.AppendLine("//" + typeof(string).Assembly.CodeBase);
+        s.AppendLine("// from " + wrap.Type.Assembly.CodeBase);
         foreach (string u in usings)
         {
             s.AppendLine($"using {u};");

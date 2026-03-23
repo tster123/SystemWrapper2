@@ -5,7 +5,20 @@ using System.Linq;
 
 namespace WrapGenerator;
 
-public class TypeFactory
+public interface ITypeFactory
+{
+    StandardizedType GetStandardizedType(Type type);
+}
+
+public class DummyTypeFactory : ITypeFactory
+{
+    public StandardizedType GetStandardizedType(Type type)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+public class TypeFactory : ITypeFactory
 {
     private readonly GenRegistrar registrar;
 
@@ -16,7 +29,7 @@ public class TypeFactory
 
     private readonly Dictionary<Type, StandardizedType> types = new();
 
-    internal StandardizedType GetStandardizedType(Type type)
+    public StandardizedType GetStandardizedType(Type type)
     {
         if (Common.TryGetValue(type, out StandardizedType r)) return r;
         if (types.TryGetValue(type, out StandardizedType r2)) return r2;

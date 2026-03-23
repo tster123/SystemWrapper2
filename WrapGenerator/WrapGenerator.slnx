@@ -3,6 +3,7 @@
   <Project Path="SourceGeneratorHarness/SourceGeneratorHarness.csproj" Id="5307d16c-467a-4ecb-b84b-7b479a0a99b6" />
   <Project Path="SourceGeneratorHarnessTest/SourceGeneratorHarnessTest.csproj" Id="be9a1e44-aef5-4c95-a491-f9427f0c2af0" />
   <Project Path="SystemWrapper2/SystemWrapper2.csproj" />
+  <Project Path="SystemWrapper2Incremental/SystemWrapper2Incremental.csproj" Id="3c6e0f7a-06bb-42e6-a02c-c17c82894e28" />
   <Project Path="WrapGenerator/WrapGenerator.csproj" />
   <Project Path="WrapGeneratorTest/WrapGeneratorTest.csproj" Id="682aa84c-60a7-4135-8c13-eb1508594dca" />
   <Project Path="WrapGeneratorTestNetFramework/WrapGeneratorTestNetFramework.csproj" Id="37f7b59d-bf8e-4775-a533-6e42ba8b2fcb" />
