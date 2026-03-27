@@ -418,7 +418,7 @@ public class SingleClassSourceGenerator
         AddUsing(paramType);
         string paramTypeStr = paramType.UseType();
         string declaration = "";
-        if (param.IsOut)
+        if (param.IsOut && !param.IsIn)
         {
             declaration = "out ";
             paramTypeStr = paramTypeStr.Replace("&", "");
