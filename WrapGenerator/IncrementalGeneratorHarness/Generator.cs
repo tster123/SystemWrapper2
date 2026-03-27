@@ -25,7 +25,7 @@ public class Generator : IIncrementalGenerator
             spc.AddSource($"ConstStrings.{nameAndContent.name}", $@"
     public static partial class ConstStrings
     {{
-        public const string {nameAndContent.name} = ""{typeof(string).Assembly.Location}"";
+        public const string {nameAndContent.name} = ""{typeof(string).Assembly.Location.Replace("\\", "\\\\")}"";
     }}");
         });
     }

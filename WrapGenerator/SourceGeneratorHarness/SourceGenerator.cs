@@ -60,6 +60,7 @@ public class SourceGenerator : ISourceGenerator
 
     public void Execute(ISourceGeneratorContext context)
     {
+        /*
         GenRegistrar registrar = new(context);
         foreach (AdditionalText file in context.AdditionalFiles) 
         {
@@ -91,7 +92,7 @@ public class SourceGenerator : ISourceGenerator
             string code = generator.GeneratorSource();
             context.AddSource(wrap.TargetNamespace.Replace('.', '/') + "/" + wrap.ClassNameToGenerate + ".cs", code);
         }
-
+        */
         
     }
 }

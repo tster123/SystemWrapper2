@@ -1,5 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using System.Reflection;
+using System.Runtime.Serialization;
 using WrapGenerator;
 using WrapGeneratorTest.TestClasses;
 
@@ -669,5 +670,37 @@ public class EventExampleWrap : IEventExampleWrap {
         SingleClassSourceGenerator generator = new(factory, wrap);
         string code = generator.GeneratorSource();
         Console.WriteLine(code);
+    }
+
+    [TestMethod]
+    public void DriveInfoTest()
+    {
+        ClassToWrap wrap = new(typeof(DriveInfo), wrapNs);
+        registrar.Register(wrap);
+        //registrar.Register(new ClassToWrap(typeof(DriveInfo), wrapNs));
+        TypeFactory factory = new(registrar);
+        SingleClassSourceGenerator generator = new(factory, wrap);
+        string code = generator.GeneratorSource();
+        Console.WriteLine(code);
+    }
+
+    [TestMethod]
+    public void FileTest()
+    {
+        ClassToWrap wrap = new(typeof(File), wrapNs);
+        registrar.Register(wrap);
+        //registrar.Register(new ClassToWrap(typeof(DriveInfo), wrapNs));
+        TypeFactory factory = new(registrar);
+        SingleClassSourceGenerator generator = new(factory, wrap);
+        string code = generator.GeneratorSource();
+        Console.WriteLine(code);
+    }
+}
+
+public class Test : ISerializable
+{
+    void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
+    {
+        throw new NotImplementedException();
     }
 }

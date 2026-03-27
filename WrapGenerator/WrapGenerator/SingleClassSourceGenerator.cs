@@ -86,6 +86,7 @@ public class SingleClassSourceGenerator
         GenerateMethods(implementedInterfaces);
         StringBuilder s = new();
         s.AppendLine("// from " + wrap.Type.Assembly.CodeBase);
+        s.AppendLine("#pragma warning disable SYSLIB0050"); // disable obsolete warnings
         foreach (string u in usings)
         {
             s.AppendLine($"using {u};");
@@ -175,8 +176,8 @@ public class SingleClassSourceGenerator
     private void GenerateMethods(List<StandardizedType> implementedInterfaces)
     {
         BindingFlags staticOrInstance = wrap.IsStatic ? BindingFlags.Static : BindingFlags.Instance;
-        MethodInfo[] methods = wrap.Type.GetMethods(staticOrInstance | BindingFlags.Public);
-        Array.Sort(methods, MethodComparer);
+        MethodInfo[] methods = wrap.Type.GetMethods(staticOrInstance | BindingFlags.NonPublic | BindingFlags.Public);
+         Array.Sort(methods, MethodComparer);
         var props = wrap.Type.GetProperties();
         var events = wrap.Type.GetEvents();
 
@@ -185,10 +186,11 @@ public class SingleClassSourceGenerator
             if (methodsToSkip.Any(m => m.DeclaringType == method.DeclaringType && m.Name == method.Name)) 
                 continue;
 
+            if (!method.IsPublic && !method.Name.Contains(".")) continue;
+
             // skip methods that are part of properties or events
             if (props.Any(p => p.GetMethod == method | p.SetMethod == method)) continue;
             if (events.Any(e => e.AddMethod == method || e.RemoveMethod == method)) continue;
-
             // use a dummy StringBuilder if the declaring type is not this type so we don't redeclare methods
             // on the interface
             MethodInfo baseMethod = method.GetBaseDefinition();
@@ -196,7 +198,8 @@ public class SingleClassSourceGenerator
             if (//method.DeclaringType != wrap.Type ||
                 //baseMethod != null && baseMethod.DeclaringType != method.DeclaringType ||
                 IsFromTypes(method, implementedInterfaces) ||
-                (baseMethod ?? method).DeclaringType == typeof(object))
+                (baseMethod ?? method).DeclaringType == typeof(object) ||
+                !method.IsPublic)
             {
                 interStr = new StringBuilder();
             }
@@ -207,13 +210,33 @@ public class SingleClassSourceGenerator
                 interStr.Append(attrStr);
                 classStr.Append(attrStr);
             }
+
+            string methodName = method.Name;
+            string callingMethodName = methodName;
+            string innerRValue = "inner";
+            if (methodName.Contains("."))
+            {
+                // this is for an explicit method implementation where it is implementing the specific method of
+                // an interface
+                string[] parts = methodName.Split('.');
+                if (parts.Length > 2)
+                {
+                    string interfaceNamespace = string.Join(".", parts.Take(parts.Length - 2));
+                    usings.Add(interfaceNamespace);
+                    methodName = string.Join(".", parts.Skip(parts.Length - 2));
+                    callingMethodName = parts.Last();
+                    innerRValue = $"(({parts[parts.Length - 2]})inner)";
+                }
+                
+            }
             StandardizedType retType = factory.GetStandardizedType(method.ReturnType);
             AddUsing(retType);
             string overrideStr = IsFromTypes(method, [factory.GetStandardizedType(typeof(object))]) ? "override " : "";
             string methodGenericParamString = GenerateMethodGenericParamString(method);
             string retTypeStr = retType.UseType();
-            interStr.Append($"\tpublic {retTypeStr} {method.Name}{methodGenericParamString}(");
-            classStr.Append($"\tpublic {overrideStr}{retTypeStr} {method.Name}{methodGenericParamString}(");
+            string modifier = method.IsPublic ? "public " : "";
+            interStr.Append($"\t{retTypeStr} {methodName}{methodGenericParamString}(");
+            classStr.Append($"\t{modifier}{overrideStr}{retTypeStr} {methodName}{methodGenericParamString}(");
             bool first = true;
             StringBuilder argList = new();
             foreach (ParameterInfo param in method.GetParameters())
@@ -239,8 +262,8 @@ public class SingleClassSourceGenerator
                 retFormat = "return {0}";
             }
 
-            string inner = wrap.IsStatic ? wrap.Type.Name : "inner";
-            string rValue = retType.WrapRValueCode($"{inner}.{method.Name}({argList})");
+            string inner = wrap.IsStatic ? wrap.Type.Name : innerRValue;
+            string rValue = retType.WrapRValueCode($"{inner}.{callingMethodName}({argList})");
             string formattedCall = string.Format(retFormat, rValue);
             classStr.AppendLine($"\t\t{formattedCall};");
             classStr.AppendLine("\t}");

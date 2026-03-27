@@ -32,14 +32,11 @@ public class GenRegistrar
     public void Register(WrapNamespace nsWrap)
     {
 
-        foreach (Assembly a in context.Domain.GetAssemblies())
+       /* foreach (Assembly a in context.Domain.GetAssemblies())
         {
             LoadAssembly(nsWrap, a);
-        }
+        }*/
 
-        
-
-        /*
         try
         {
             foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())
@@ -54,7 +51,6 @@ public class GenRegistrar
                 LoadAssembly(nsWrap, a);
             }
         }
-        */
     }
 
     private void LoadAssembly(WrapNamespace nsWrap, Assembly a)
