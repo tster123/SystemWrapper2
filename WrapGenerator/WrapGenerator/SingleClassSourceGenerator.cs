@@ -427,7 +427,7 @@ public class SingleClassSourceGenerator
         
         //TODO handle out parameters that are wrapped.
         string arg = "";
-        if (param.IsOut) arg = "out ";
+        if (param.IsOut && !param.IsIn) arg = "out ";
         arg += param.Name;
         if (paramType.IsWrapped) arg += "." + $"Wrapped{paramType.UseType(true)}";
         return (declaration, arg);
