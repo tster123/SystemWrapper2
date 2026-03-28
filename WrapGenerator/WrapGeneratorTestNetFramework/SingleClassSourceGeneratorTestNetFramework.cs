@@ -24,21 +24,15 @@ namespace WrapGeneratorTestNetFramework
     }
 
     [TestClass]
-    public class UnitTest1
+    public class SingleClassSourceGeneratorTestNetFramework
     {
         private static readonly WrapNamespace wrapNs = new()
         {
             Namespace = "System.IO",
             TargetNamespaceFormat = "Wrapped.TestClasses"
         };
-        TestSourceGeneratorContext testContext;
-        GenRegistrar registrar;
 
-        public UnitTest1()
-        {
-            testContext = new();
-            registrar = new(testContext);
-        }
+        private readonly GenRegistrar registrar = new();
 
         [TestMethod]
         public void StreamTest()

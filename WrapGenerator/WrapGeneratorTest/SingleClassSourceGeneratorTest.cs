@@ -27,18 +27,7 @@ public class TestSourceGeneratorContext : ISourceGeneratorContext
 [TestClass]
 public sealed class SingleClassSourceGeneratorTest
 {
-    string[] assemblyFiles;
-    MetadataLoadContext loadContext;
-    TestSourceGeneratorContext testContext;
-    GenRegistrar registrar;
-
-    public SingleClassSourceGeneratorTest()
-    {
-        assemblyFiles = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.Location).Where(s => !string.IsNullOrEmpty(s)).ToArray();
-        loadContext = new(new PathAssemblyResolver(assemblyFiles));
-        testContext = new(loadContext, []);
-        registrar = new(testContext);
-    }
+    readonly GenRegistrar registrar = new();
 
 
     private static readonly WrapNamespace wrapNs = new()

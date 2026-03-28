@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -10,12 +9,6 @@ namespace WrapGenerator;
 public class GenRegistrar
 {
     private readonly List<ClassToWrap> classesToWrap = new();
-    private readonly ISourceGeneratorContext context;
-
-    public GenRegistrar(ISourceGeneratorContext context)
-    {
-        this.context = context;
-    }
 
     public void Register(ClassToWrap toWrap)
     {
@@ -67,10 +60,6 @@ public class GenRegistrar
         }
         foreach (Type t in a.GetTypes())
         {
-            if (t == typeof(FileSystemWatcher))
-            {
-                Console.WriteLine("foo");
-            }
             if (t.IsNotPublic) continue;
             if (!t.IsClass) continue;
             if (t.IsNested) continue;

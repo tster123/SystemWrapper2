@@ -43,7 +43,7 @@ public class Program
 
     public void GenerateCode()
     {
-        GenRegistrar registrar = new(context);
+        GenRegistrar registrar = new();
         foreach (WrapNamespace ns in toWrap)
         {
             registrar.Register(ns);

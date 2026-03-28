@@ -55,7 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Playground.cs" />
-    <Compile Include="UnitTest1.cs" />
+    <Compile Include="SingleClassSourceGeneratorTestNetFramework.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
