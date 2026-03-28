@@ -2,11 +2,7 @@
   <Folder Name="/Solution Items/">
     <File Path="Build.ps1" />
   </Folder>
-  <Project Path="IncrementalGeneratorHarness/IncrementalGeneratorHarness.csproj" Id="1f170f17-9323-442f-a90e-d8b58211e128" />
-  <Project Path="SourceGeneratorHarness/SourceGeneratorHarness.csproj" Id="5307d16c-467a-4ecb-b84b-7b479a0a99b6" />
-  <Project Path="SourceGeneratorHarnessTest/SourceGeneratorHarnessTest.csproj" Id="be9a1e44-aef5-4c95-a491-f9427f0c2af0" />
   <Project Path="SystemWrapper2/SystemWrapper2.csproj" />
-  <Project Path="SystemWrapper2Incremental/SystemWrapper2Incremental.csproj" Id="3c6e0f7a-06bb-42e6-a02c-c17c82894e28" />
   <Project Path="WrapCli/WrapCli.csproj" Id="bc4d84ca-16d6-4bf1-be00-78825f9df52b" />
   <Project Path="WrapGenerator/WrapGenerator.csproj" />
   <Project Path="WrapGeneratorTest/WrapGeneratorTest.csproj" Id="682aa84c-60a7-4135-8c13-eb1508594dca" />
