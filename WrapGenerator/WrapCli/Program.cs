@@ -1,19 +1,14 @@
-﻿using System.Security.Cryptography;
-using WrapGenerator;
+﻿using WrapGenerator;
 
 namespace WrapCli;
-
-public interface IFoo
-{
-    void Mork();
-
-}
 
 public class Program
 {
     static Program()
     {
+#pragma warning disable CS0168 // Variable is declared but never used
         DriveInfo i;
+#pragma warning restore CS0168 // Variable is declared but never used
     }
 
     private readonly GenerationContext context;
@@ -57,7 +52,6 @@ public class Program
         TypeFactory factory = new(registrar);
         foreach (ClassToWrap wrap in registrar.AllClassesToWrap)
         {
-            Console.WriteLine("Generating " + wrap.ClassNameToGenerate);
             SingleClassSourceGenerator generator = new(factory, wrap);
             string code = generator.GeneratorSource();
             context.AddSource(wrap.TargetNamespace.Replace('.', '/') + "/" + wrap.ClassNameToGenerate + ".cs", code);

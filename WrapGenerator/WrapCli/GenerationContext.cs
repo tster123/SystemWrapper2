@@ -4,7 +4,7 @@ namespace WrapCli;
 
 public class GenerationContext : ISourceGeneratorContext
 {
-    public CancellationToken CancellationToken { get; } = new CancellationToken(false);
+    public CancellationToken CancellationToken { get; } = new(false);
 
     private string BasePath { get; }
 
@@ -16,8 +16,8 @@ public class GenerationContext : ISourceGeneratorContext
     public void AddSource(string hintPath, string source)
     {
         string path = Path.Combine(BasePath, hintPath);
-        string dir = Path.GetDirectoryName(path);
-        Directory.CreateDirectory(dir);
+        string? dir = Path.GetDirectoryName(path);
+        if (dir != null) Directory.CreateDirectory(dir);
         File.WriteAllText(path, source);
     }
 }

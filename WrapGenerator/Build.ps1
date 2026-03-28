@@ -21,9 +21,9 @@ $CsProjTemplate = '
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include=`"WrapHelpers.cs`" />
-	<Compile Include=`"Assembly.cs`" />
-  <ItemGroup>
+    <Compile Include="WrapHelpers.cs" />
+    <Compile Include="Assembly.cs" />
+  </ItemGroup>
 
   <ItemGroup>
 __COMPILE_FILES__
@@ -44,7 +44,7 @@ foreach ($folder in $folders)
 {
 	$framework = $folder.Name
 
-	if ($frameworkString != "") { $frameworkString += ";" }
+	if ($frameworkString -ne "") { $frameworkString += ";" }
 	$frameworkString += $framework
 
 	$genFrameworkDir = "$PSScriptRoot\gen\$framework"
@@ -52,7 +52,7 @@ foreach ($folder in $folders)
 	. "$($folder.FullName)\WrapCli.exe" $genFrameworkDir
 
 	#$compileItems += "  <ItemGroup>"
-    $compileItems += "    <Compile Include=`"$genFrameworkDir/*.cs`" Condition=`"'`$(TargetFramework)' == '$framework'`"/>"
+    $compileItems += "    <Compile Include=`"$genFrameworkDir\**\*.cs`" Condition=`"'`$(TargetFramework)' == '$framework'`"/>`n"
     #$compileItems += "  </ItemGroup>"
 
 	
@@ -60,15 +60,17 @@ foreach ($folder in $folders)
 }
 
 $genDir = "$PSScriptRoot\gen"
-
-$csProj = $CsProjTemplate.Replace("__FRAMEWORK__", $frameworkString)
-$csProj = $CsProjTemplate.Replace("__COMPILE_FILES__", $compileItems)
+$source = "$PSScriptRoot\SystemWrapper2"
+if (-not (test-path $genDir)) { mkdir $genDir }
+$csProj = $CsProjTemplate
+$csProj = $csProj.Replace("__FRAMEWORK__", $frameworkString)
+$csProj = $csProj.Replace("__COMPILE_FILES__", $compileItems)
 $csProjFilename = "$genDir\SystemWrapper2.csproj"
-$csProj | Out-File -FilePath $genDir
-Copy-Item -LiteralPath "$genDir\WrapHelpers.cs" -Destination $targetDir -Force
-Copy-Item -LiteralPath "$genDir\Assembly.cs" -Destination $targetDir -Force
+$csProj | Out-File -FilePath "$genDir\SystemWrapper2.csproj"
+Copy-Item -LiteralPath "$source\WrapHelpers.cs" -Destination $genDir -Force
+Copy-Item -LiteralPath "$source\Assembly.cs" -Destination $genDir -Force
 
-cd $targetDir
+cd $genDir
 dotnet build
 
 cd $originalDir
