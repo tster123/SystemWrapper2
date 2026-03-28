@@ -24,6 +24,7 @@ namespace WrapGeneratorTestNetFramework
             registrar.Register(wrap);
             TypeFactory factory = new(registrar);
             SingleClassSourceGenerator generator = new(factory, wrap);
+            generator.IncludeDllLocation = true;
             string code = generator.GeneratorSource();
             Console.WriteLine(code);
         }
