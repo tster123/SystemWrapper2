@@ -83,10 +83,12 @@ public class TypeFactory : ITypeFactory
         [typeof(float)]  = MakeCommon(typeof(float), "float"),
         [typeof(string)] = MakeCommon(typeof(string), "string"),
         [typeof(byte)]   = MakeCommon(typeof(byte), "byte"),
+        [typeof(sbyte)]  = MakeCommon(typeof(sbyte), "sbyte"),
         [typeof(bool)]   = MakeCommon(typeof(bool), "bool"),
         [typeof(ushort)] = MakeCommon(typeof(ushort), "ushort"),
         [typeof(uint)]   = MakeCommon(typeof(uint), "uint"),
         [typeof(ulong)]  = MakeCommon(typeof(ulong), "ulong"),
+        [typeof(char)]   = MakeCommon(typeof(char), "char"),
     };
 
     private static StandardizedType MakeCommon(Type type, string shortName)
