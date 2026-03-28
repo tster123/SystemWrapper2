@@ -81,7 +81,7 @@ cd $genDir
 
 if ($PackageNuget)
 {
-	dotnet pack
+	dotnet pack --version 1.0.1
 }
 else 
 {
