@@ -1,11 +1,11 @@
 ﻿using System.Runtime.Versioning;
 // ReSharper disable UnusedMember.Global
 // unused because it's all used with reflection
+// ReSharper disable UnusedParameter.Local
 
 #pragma warning disable CS0067 // Event is never used
 
 namespace WrapGeneratorTest.TestClasses;
-
 
 public enum ExampleEnum
 {
@@ -82,7 +82,7 @@ public class WrappingExample
 
     public PropertyExample[] MakeProperties(PropertyExample[] props)
     {
-        return new PropertyExample[0];
+        return [];
     }
 }
 

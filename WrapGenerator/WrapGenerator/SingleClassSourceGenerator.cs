@@ -16,6 +16,7 @@ public class SingleClassSourceGenerator
     private readonly string wrappedProperty;
     private readonly StandardizedType standardizedType;
     private readonly TypeFactory factory;
+    public bool IncludeDllLocation { get; set; }
 
     public SingleClassSourceGenerator(TypeFactory factory, ClassToWrap wrap)
     {
@@ -85,7 +86,7 @@ public class SingleClassSourceGenerator
 
         GenerateMethods(implementedInterfaces);
         StringBuilder s = new();
-        s.AppendLine("// from " + wrap.Type.Assembly.CodeBase);
+        if (IncludeDllLocation) s.AppendLine("// from " + wrap.Type.Assembly.CodeBase);
         s.AppendLine("#pragma warning disable SYSLIB0050"); // disable obsolete warnings
         foreach (string u in usings)
         {
@@ -500,7 +501,7 @@ public class SingleClassSourceGenerator
 
             string typeStr = propType.UseType();
 
-            interStr.Append($"\tpublic {typeStr} {property.Name} {{ ");
+            interStr.Append($"\t{typeStr} {property.Name} {{ ");
             classStr.AppendLine($"\tpublic {typeStr} {property.Name} {{ ");
 
             if (property.GetMethod != null && property.GetMethod.IsPublic)
@@ -542,7 +543,7 @@ public class SingleClassSourceGenerator
 
             string typeStr = eventHandlerType.UseType();
 
-            interStr.AppendLine($"\tpublic event {typeStr} {ev.Name}; ");
+            interStr.AppendLine($"\tevent {typeStr} {ev.Name}; ");
             classStr.AppendLine($"\tpublic event {typeStr} {ev.Name} {{ ");
 
             if (ev.AddMethod != null && ev.AddMethod.IsPublic)

@@ -1,28 +1,8 @@
-﻿using Microsoft.CodeAnalysis;
-using System.Reflection;
-using System.Runtime.Serialization;
+﻿using System.Runtime.Serialization;
 using WrapGenerator;
 using WrapGeneratorTest.TestClasses;
 
 namespace WrapGeneratorTest;
-
-
-public class TestSourceGeneratorContext : ISourceGeneratorContext
-{
-    public IEnumerable<AdditionalText> AdditionalFiles { get; }
-    public CancellationToken CancellationToken => new(false);
-    public MetadataLoadContext Domain { get; }
-
-    public TestSourceGeneratorContext(MetadataLoadContext domain, IEnumerable<AdditionalText> additionalFiles)
-    {
-        Domain = domain;
-        AdditionalFiles = additionalFiles;
-    }
-
-    public Dictionary<string, string> SourceFiles = new();
-
-    public void AddSource(string hintName, string source) => SourceFiles[hintName] = source;
-}
 
 [TestClass]
 public sealed class SingleClassSourceGeneratorTest
@@ -75,13 +55,14 @@ public sealed class SingleClassSourceGeneratorTest
     public void PropertyTest()
     {
         DoTest("PropertyExample", @"
+#pragma warning disable SYSLIB0050
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
 using System;
 namespace Wrapped.TestClasses {
 public interface IPropertyExampleWrap {
 	PropertyExample WrappedPropertyExample { get; }
-    public int Foo { get; set; }
+    int Foo { get; set; }
 }
 
 public class PropertyExampleWrap : IPropertyExampleWrap {
@@ -116,6 +97,7 @@ public class PropertyExampleWrap : IPropertyExampleWrap {
     public void ListTest()
     {
         DoTest("ListExample", @"
+#pragma warning disable SYSLIB0050
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
 using System.Collections.Generic;
@@ -123,7 +105,7 @@ using System;
 namespace Wrapped.TestClasses {
 public interface IListExampleWrap {
 	ListExample WrappedListExample { get; }
-	public List<string> Method(List<int> foo);
+	List<string> Method(List<int> foo);
 }
 
 public class ListExampleWrap : IListExampleWrap {
@@ -157,13 +139,14 @@ public class ListExampleWrap : IListExampleWrap {
     public void ArrayTest()
     {
         DoTest("ArrayExample", @"
+#pragma warning disable SYSLIB0050
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
 using System;
 namespace Wrapped.TestClasses {
 public interface IArrayExampleWrap {
 	ArrayExample WrappedArrayExample { get; }
-	public String[] Method(Int32[] foo);
+	String[] Method(Int32[] foo);
 }
 
 public class ArrayExampleWrap : IArrayExampleWrap {
@@ -197,13 +180,14 @@ public class ArrayExampleWrap : IArrayExampleWrap {
     public void NullableTest()
     {
         DoTest("NullableExample", @"
+#pragma warning disable SYSLIB0050
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
 using System;
 namespace Wrapped.TestClasses {
 public interface INullableExampleWrap {
 	NullableExample WrappedNullableExample { get; }
-	public Nullable<byte> Method(Nullable<int> foo);
+	Nullable<byte> Method(Nullable<int> foo);
 }
 
 public class NullableExampleWrap : INullableExampleWrap {
@@ -238,13 +222,14 @@ public class NullableExampleWrap : INullableExampleWrap {
     {
         Console.WriteLine(typeof(GenericExample<>).Name);
         DoTest(typeof(GenericExample<>), [], @"
+#pragma warning disable SYSLIB0050
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
 using System;
 namespace Wrapped.TestClasses {
 public interface IGenericExample_T1_Wrap<T1> {
 	GenericExample<T1> WrappedGenericExample<T1> { get; }
-	public T1 Method<T2>(T2 foo);
+	T1 Method<T2>(T2 foo);
 }
 
 public class GenericExample_T1_Wrap<T1> : IGenericExample_T1_Wrap<T1> {
@@ -278,13 +263,14 @@ public class GenericExample_T1_Wrap<T1> : IGenericExample_T1_Wrap<T1> {
     public void InterfaceTest()
     {
         DoTest("InterfaceExample", @"
+#pragma warning disable SYSLIB0050
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
 using System;
 namespace Wrapped.TestClasses {
 public interface IInterfaceExampleWrap : IFoo, IBar {
 	InterfaceExample WrappedInterfaceExample { get; }
-	public int Mork { get; set; }
+	int Mork { get; set; }
 }
 
 public class InterfaceExampleWrap : IInterfaceExampleWrap {
@@ -325,6 +311,7 @@ public class InterfaceExampleWrap : IInterfaceExampleWrap {
     public void DisposableTest()
     {
         DoTest("DisposableExample", @"
+#pragma warning disable SYSLIB0050
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
 using System;
@@ -364,14 +351,15 @@ public class DisposableExampleWrap : IDisposableExampleWrap {
     public void WrappingTest()
     {
         DoTest("WrappingExample", @"
+#pragma warning disable SYSLIB0050
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
 using System;
 namespace Wrapped.TestClasses {
 public interface IWrappingExampleWrap {
 	WrappingExample WrappedWrappingExample { get; }
-	public PropertyExample Prop { get; set; }
-	public PropertyExample[] MakeProperties(PropertyExample[] props);
+	PropertyExample Prop { get; set; }
+	PropertyExample[] MakeProperties(PropertyExample[] props);
 }
 
 public class WrappingExampleWrap : IWrappingExampleWrap {
@@ -409,13 +397,14 @@ public class WrappingExampleWrap : IWrappingExampleWrap {
     public void ArraySegmentTest()
     {
         DoTest("ArraySegmentExample", @"
+#pragma warning disable SYSLIB0050
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
 using System;
 namespace Wrapped.TestClasses {
 public interface IArraySegmentExampleWrap {
 	ArraySegmentExample WrappedArraySegmentExample { get; }
-	public void Foo(out ArraySegment<byte> foo);
+	void Foo(out ArraySegment<byte> foo);
 }
 
 public class ArraySegmentExampleWrap : IArraySegmentExampleWrap {
@@ -449,13 +438,14 @@ public class ArraySegmentExampleWrap : IArraySegmentExampleWrap {
     public void OutTest() // TODO, shouldn't out parameter be wrapped?
     {
         DoTest("OutExample", @"
+#pragma warning disable SYSLIB0050
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
 using System;
 namespace Wrapped.TestClasses {
 public interface IOutExampleWrap {
 	OutExample WrappedOutExample { get; }
-	public void Mork(out int a, out PropertyExample p);
+	void Mork(out int a, out PropertyExample p);
 }
 
 public class OutExampleWrap : IOutExampleWrap {
@@ -489,6 +479,7 @@ public class OutExampleWrap : IOutExampleWrap {
     public void CtorTest() // TODO: shouldn't ctor parameter be wrapped?
     {
         DoTest("CtorExample", @"
+#pragma warning disable SYSLIB0050
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
 using System;
@@ -527,6 +518,7 @@ public class CtorExampleWrap : ICtorExampleWrap {
     public void AttributesTest()
     {
         DoTest("AttributesExample", @"
+#pragma warning disable SYSLIB0050
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
 using System.Runtime.Versioning;
@@ -538,12 +530,12 @@ public interface IAttributesExampleWrap {
 	[UnsupportedOSPlatform(platformName: ""linux"", message: null)]
 	[Obsolete(message: null, error: false)]
 	[Example(boolean: true, anEnum: ExampleEnum.Bar, integer: 42, String1 = ""foo"", AnotherString = ""Foo"")]
-	public void Double();
+	void Double();
 	[Obsolete(message: ""This API supports obsolete formatter-based serialization. It should not be called or extended by application code."", error: false, DiagnosticId = ""SYSLIB0051"", UrlFormat = ""https://aka.ms/dotnet-warnings/{0}"")]
-	public void OldMethod();
+	void OldMethod();
 	[Obsolete(message: null, error: false)]
 	[Example(boolean: true, anEnum: ExampleEnum.Buz, String1 = ""foo"", Integer = 1)]
-	public void Single();
+	void Single();
 }
 
 public class AttributesExampleWrap : IAttributesExampleWrap {
@@ -590,15 +582,16 @@ public class AttributesExampleWrap : IAttributesExampleWrap {
     public void EventTest()
     {
         DoTest(typeof(EventExample), [typeof(ExampleEventArgs)], @"
+#pragma warning disable SYSLIB0050
 using SystemWrapper2;
 using WrapGeneratorTest.TestClasses;
 using System;
 namespace Wrapped.TestClasses {
 public interface IEventExampleWrap {
 	EventExample WrappedEventExample { get; }
-	public event EventHandler SimpleEvent; 
-	public event EventHandler<EventArgs> WithArgs; 
-	public event EventHandler<IExampleEventArgsWrap> WithCustomArgs; 
+	event EventHandler SimpleEvent; 
+	event EventHandler<EventArgs> WithArgs; 
+	event EventHandler<IExampleEventArgsWrap> WithCustomArgs; 
 }
 
 public class EventExampleWrap : IEventExampleWrap {
@@ -683,13 +676,5 @@ public class EventExampleWrap : IEventExampleWrap {
         SingleClassSourceGenerator generator = new(factory, wrap);
         string code = generator.GeneratorSource();
         Console.WriteLine(code);
-    }
-}
-
-public class Test : ISerializable
-{
-    void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
-    {
-        throw new NotImplementedException();
     }
 }

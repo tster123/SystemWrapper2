@@ -1,27 +1,10 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Threading;
 using WrapGenerator;
 
 namespace WrapGeneratorTestNetFramework
 {
-
-    public class TestSourceGeneratorContext : ISourceGeneratorContext
-    {
-        public CancellationToken CancellationToken => new(false);
-
-        public TestSourceGeneratorContext()
-        {
-        }
-
-        public Dictionary<string, string> SourceFiles = new();
-
-        public void AddSource(string hintName, string source) => SourceFiles[hintName] = source;
-    }
 
     [TestClass]
     public class SingleClassSourceGeneratorTestNetFramework
