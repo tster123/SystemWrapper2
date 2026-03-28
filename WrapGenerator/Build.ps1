@@ -1,3 +1,12 @@
+[CmdletBinding()]
+param (
+	[Parameter()]
+	[switch]
+	$PackageNuget
+)
+
+$originalDir = $pwd
+cd $PSScriptRoot
 dotnet build
 if ($LASTEXITCODE -ne 0)
 {
@@ -37,7 +46,6 @@ __COMPILE_FILES__
 
 
 $folders = dir "WrapCli\bin\Debug"
-$originalDir = $pwd
 $frameworkString = ""
 $compileItems = ""
 foreach ($folder in $folders)
@@ -65,12 +73,19 @@ if (-not (test-path $genDir)) { mkdir $genDir }
 $csProj = $CsProjTemplate
 $csProj = $csProj.Replace("__FRAMEWORK__", $frameworkString)
 $csProj = $csProj.Replace("__COMPILE_FILES__", $compileItems)
-$csProjFilename = "$genDir\SystemWrapper2.csproj"
 $csProj | Out-File -FilePath "$genDir\SystemWrapper2.csproj"
 Copy-Item -LiteralPath "$source\WrapHelpers.cs" -Destination $genDir -Force
 Copy-Item -LiteralPath "$source\Assembly.cs" -Destination $genDir -Force
 
 cd $genDir
-dotnet build
+
+if ($PackageNuget)
+{
+	dotnet pack
+}
+else 
+{
+	dotnet build
+}
 
 cd $originalDir
