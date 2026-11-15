@@ -1,5 +1,5 @@
-﻿using System.Runtime.Serialization;
-using WrapGenerator;
+﻿using WrapGenerator;
+using WrapGenerator.CodeGeneration;
 using WrapGeneratorTest.TestClasses;
 
 namespace WrapGeneratorTest;
@@ -16,24 +16,49 @@ public sealed class SingleClassSourceGeneratorTest
         TargetNamespaceFormat = "Wrapped.TestClasses"
     };
 
-    private void DoTest(Type toWrap, Type[] otherToRegister, string? expected)
+    private void DoTest(Type toWrap, Type[] otherToRegister, string? expected, string? factories = null)
     {
         ClassToWrap wrap = new(toWrap, wrapNs);
         registrar.Register(wrap);
 
+        List<ClassToWrap> othersWrapped = new();
         foreach (Type other in otherToRegister)
         {
             ClassToWrap otherWrap = new(other, wrapNs);
             registrar.Register(otherWrap);
+            othersWrapped.Add(otherWrap);
         }
+		registrar.CompleteRegistration();
 
         TypeFactory factory = new(registrar);
+        
+        foreach (ClassToWrap other in othersWrapped)
+        {
+			// force all to generate so that then factories are primed
+            SingleClassSourceGenerator g = new(factory, other);
+            g.GeneratorSource();
+        }
+
+        
         SingleClassSourceGenerator generator = new(factory, wrap);
         string code = generator.GeneratorSource();
         Console.WriteLine(code);
         if (expected != null)
         {
             CodeAsserts.AreEqual(code, expected);
+        }
+
+        FactoriesGenerator fg = new(factory);
+        string? factoryCode = fg.GenerateSource();
+        if (factories != null)
+        {
+            if (factoryCode == null)
+            {
+                Assert.Fail("Expected factory code, but none generated");
+            }
+            Console.WriteLine("====== factories ========");
+            Console.WriteLine(factoryCode);
+            CodeAsserts.AreEqual(factoryCode, factories);
         }
     }
 
@@ -627,6 +652,73 @@ public class EventExampleWrap : IEventExampleWrap {
 	}
 }
 
+}");
+    }
+	                  
+    [TestMethod]
+    public void AbstractTest()
+    {
+        DoTest(typeof(AbstractChecker),
+            [typeof(AbstractClass), typeof(Base1), typeof(Base11), typeof(Base12), typeof(Base2), typeof(Base3)],
+            @"
+#pragma warning disable SYSLIB0050
+using SystemWrapper2;
+using WrapGeneratorTest.TestClasses;
+using System.Collections.Generic;
+using System;
+namespace Wrapped.TestClasses {
+public interface IAbstractCheckerWrap {
+	AbstractChecker WrappedAbstractChecker { get; }
+	IAbstractClassWrap[] Array();
+	IEnumerable<IAbstractClassWrap> Enumerable();
+	IAbstractClassWrap Simple();
+}
+
+public class AbstractCheckerWrap : IAbstractCheckerWrap {
+	private readonly AbstractChecker inner;
+	public AbstractChecker WrappedAbstractChecker => inner;
+	public AbstractCheckerWrap(AbstractChecker inner) {
+		this.inner = inner;
+	}
+	public AbstractCheckerWrap()
+		: this(new AbstractChecker()) { }
+
+
+	public IAbstractClassWrap[] Array() {
+		return WrapHelpers.WrapArray(inner.Array(), e => Factories.new_IAbstractClassWrap_AbstractClass(e));
+	}
+	public IEnumerable<IAbstractClassWrap> Enumerable() {
+		return WrapHelpers.WrapEnumerable(inner.Enumerable(), e => Factories.new_IAbstractClassWrap_AbstractClass(e));
+	}
+	public IAbstractClassWrap Simple() {
+		return inner.Simple() is AbstractClass _r ? Factories.new_IAbstractClassWrap_AbstractClass(_r) : null;
+	}
+	public override bool Equals(Object obj) {
+		return inner.Equals(obj);
+	}
+	public override int GetHashCode() {
+		return inner.GetHashCode();
+	}
+	public override string ToString() {
+		return inner.ToString();
+	}
+}
+
+}",
+            factories: @"using Wrapped.TestClasses;
+using WrapGeneratorTest.TestClasses;
+internal static class Factories {
+    internal static IAbstractClassWrap new_IAbstractClassWrap_AbstractClass(AbstractClass inner) {
+        if (inner is Base1 r0) return Factories.new_IBase1Wrap_Base1(r0);
+        if (inner is Base2 r1) return new Base2Wrap(r1);
+        if (inner is Base3 r2) return new Base3Wrap(r2);
+        return new AbstractClassWrap(inner);
+    }
+    internal static IBase1Wrap new_IBase1Wrap_Base1(Base1 inner) {
+        if (inner is Base11 r0) return new Base11Wrap(r0);
+        if (inner is Base12 r1) return new Base12Wrap(r1);
+        return new Base1Wrap(inner);
+    }
 }");
     }
 

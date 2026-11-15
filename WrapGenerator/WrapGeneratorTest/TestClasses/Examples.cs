@@ -179,3 +179,28 @@ public class ExampleEventArgs : EventArgs
         Foo = foo;
     }
 }
+
+public abstract class AbstractClass { }
+public class Base1 : AbstractClass { }
+public class Base2 : AbstractClass { }
+public class Base3 : AbstractClass { }
+public class Base11 : Base1 { }
+public class Base12 : Base1 { }
+
+public class AbstractChecker
+{
+    public AbstractClass Simple()
+    {
+        return new Base1();
+    }
+
+    public AbstractClass[] Array()
+    {
+        return [];
+    }
+
+    public IEnumerable<AbstractClass> Enumerable()
+    {
+        return [];
+    }
+}

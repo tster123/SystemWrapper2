@@ -33,6 +33,7 @@ public record StandardizedType
     public bool IsWrapped { get; }
     public bool IsArray { get; }
     public ITypeFactory Factory { get; }
+    public string? FactoryMethod { get; set; }
 
     public string UseType(bool useInner = false, bool forceClass = false)
     {
@@ -64,9 +65,9 @@ public record StandardizedType
             if (IsArray)
             {
                 StandardizedType elemType = Factory.GetStandardizedType(Original.GetElementType()!);
-                return $"WrapHelpers.WrapArray({rValue}, e => new {elemType.UseType(forceClass: true)}(e))";
+                return $"WrapHelpers.WrapArray({rValue}, e => {elemType.FactoryMethodCall("e")})";
             }
-            return $"{rValue} is {Original.Name} _r ? new {UseType(forceClass: true)}(_r) : null";
+            return $"{rValue} is {Original.Name} _r ? {FactoryMethodCall("_r")} : null";
         }
 
         Type[] paramTypes = Original.GetGenericArguments();
@@ -75,10 +76,17 @@ public record StandardizedType
             StandardizedType iEnumType = Factory!.GetStandardizedType(paramTypes[0]);
             if (iEnumType.IsWrapped)
             {
-                return $"WrapHelpers.WrapEnumerable({rValue}, e => new {iEnumType.UseType(forceClass: true)}(e))";
+                return $"WrapHelpers.WrapEnumerable({rValue}, e => {iEnumType.FactoryMethodCall("e")})";
             }
         }
 
         return rValue;
     }
+
+    public string FactoryMethodCall(string innerCode)
+    {
+        string method = FactoryMethod ?? $"new {UseType(forceClass: true)}";
+        return $"{method}({innerCode})";
+    }
+
 }

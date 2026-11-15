@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 
-namespace WrapGenerator;
+namespace WrapGenerator.CodeGeneration;
 
 public interface ISourceGeneratorContext
 {

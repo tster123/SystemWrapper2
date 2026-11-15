@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "WrapCli": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\temp\\gen"
+    }
+  }
+}

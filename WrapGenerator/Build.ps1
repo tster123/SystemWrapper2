@@ -25,7 +25,7 @@ $CsProjTemplate = '
 
   <PropertyGroup>
     <PackageId>SystemWrapper2</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>Tyler Boone</Authors>
   </PropertyGroup>
 

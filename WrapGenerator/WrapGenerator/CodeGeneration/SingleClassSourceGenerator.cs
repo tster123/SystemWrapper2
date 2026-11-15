@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
-namespace WrapGenerator;
+namespace WrapGenerator.CodeGeneration;
 
 //TODO - do events properly
 public class SingleClassSourceGenerator

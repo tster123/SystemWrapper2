@@ -1,4 +1,4 @@
-﻿using WrapGenerator;
+﻿using WrapGenerator.CodeGeneration;
 
 namespace WrapCli;
 

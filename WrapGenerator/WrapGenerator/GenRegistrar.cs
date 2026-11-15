@@ -75,4 +75,31 @@ public class GenRegistrar
             }
         }
     }
+
+    public void CompleteRegistration()
+    {
+        for (int i = 0; i < classesToWrap.Count; i++)
+        {
+            ClassToWrap a = classesToWrap[i];
+            for (int j = i + 1; j < classesToWrap.Count; j++)
+            {
+                ClassToWrap b = classesToWrap[j];
+                if (IsDirectChild(a.Type, b.Type))
+                {
+                    a.Implementers.Add(b);
+                }
+                else if (IsDirectChild(b.Type, a.Type))
+                {
+                    b.Implementers.Add(a);
+                }
+            }
+        }
+    }
+
+    private bool IsDirectChild(Type p, Type c)
+    {
+        if (c.BaseType == p) return true;
+        if (c.GetInterfaces().Contains(p)) return true;
+        return false;
+    }
 }

@@ -18,6 +18,12 @@ public class DummyTypeFactory : ITypeFactory
     }
 }
 
+internal class FactoryMethodDemand(ClassToWrap Wrap, StandardizedType StType)
+{
+    public ClassToWrap Wrap { get; } = Wrap;
+    public StandardizedType StType { get; } = StType;
+}
+
 public class TypeFactory : ITypeFactory
 {
     private readonly GenRegistrar registrar;
@@ -28,6 +34,7 @@ public class TypeFactory : ITypeFactory
     }
 
     private readonly Dictionary<Type, StandardizedType> types = new();
+    internal readonly Dictionary<string, FactoryMethodDemand> FactoryMethods = new();
 
     public StandardizedType GetStandardizedType(Type type)
     {
@@ -68,7 +75,16 @@ public class TypeFactory : ITypeFactory
             iName         = eWrap?.InterfaceNameToGenerate.Split('`').First();
         }
 
+        
+
         StandardizedType ret = new(type, ns, cName, iName, parameterized, this, eWrap != null, type.IsArray);
+        if (eWrap != null && eWrap.Implementers.Count > 0)
+        {
+            string name = "new_" + eWrap.InterfaceNameToGenerate.Replace(".", "_") + "_" + eWrap.Type.Name;
+            FactoryMethods[name] = new(eWrap, ret);
+            ret.FactoryMethod = "Factories." + name;
+        }
+
         types[type] = ret;
         return ret;
     }

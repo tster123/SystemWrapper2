@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace WrapGenerator;
@@ -11,8 +12,8 @@ public record ClassToWrap
     public readonly string InterfaceNameToGenerate;
     public readonly string[]? ClassLevelGenericParameters;
     public bool IsStatic => Type.IsSealed && Type.IsAbstract;
-    public ClassToWrap(Type type,
-        WrapNamespace wrapSettings)
+    public List<ClassToWrap> Implementers = new();
+    public ClassToWrap(Type type, WrapNamespace wrapSettings)
     {
         Type = type;
         Type[] generics = type.GetGenericArguments();
@@ -36,7 +37,9 @@ public record ClassToWrap
 
     public override string ToString()
     {
-        return
-            $"{nameof(Type)}: {Type}, {nameof(TargetNamespace)}: {TargetNamespace}, {nameof(ClassNameToGenerate)}: {ClassNameToGenerate}, {nameof(InterfaceNameToGenerate)}: {InterfaceNameToGenerate}";
+        return $"{nameof(Type)}: {Type}, " +
+               $"{nameof(TargetNamespace)}: {TargetNamespace}, " +
+               $"{nameof(ClassNameToGenerate)}: {ClassNameToGenerate}, " +
+               $"{nameof(InterfaceNameToGenerate)}: {InterfaceNameToGenerate}";
     }
 }

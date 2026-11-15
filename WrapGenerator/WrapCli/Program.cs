@@ -1,4 +1,5 @@
 ﻿using WrapGenerator;
+using WrapGenerator.CodeGeneration;
 
 namespace WrapCli;
 
@@ -49,12 +50,19 @@ public class Program
             registrar.Register(ns);
         }
 
+        registrar.CompleteRegistration();
         TypeFactory factory = new(registrar);
         foreach (ClassToWrap wrap in registrar.AllClassesToWrap)
         {
             SingleClassSourceGenerator generator = new(factory, wrap);
             string code = generator.GeneratorSource();
             context.AddSource(wrap.TargetNamespace.Replace('.', '/') + "/" + wrap.ClassNameToGenerate + ".cs", code);
+        }
+        FactoriesGenerator factGen = new FactoriesGenerator(factory);
+        string? factories = factGen.GenerateSource();
+        if (factories != null)
+        {
+            context.AddSource("Factories.cs", factories);
         }
     }
 }
