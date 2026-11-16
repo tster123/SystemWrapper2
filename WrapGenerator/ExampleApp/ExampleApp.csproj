@@ -8,9 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="SystemWrapper2">
+    <Reference Include="SystemWrapper2" >
       <HintPath>..\gen\bin\Debug\net10.0\SystemWrapper2.dll</HintPath>
     </Reference>
   </ItemGroup>
 
+	<PropertyGroup Condition="Exists('..\gen\bin\Debug\net10.0\SystemWrapper2.dll')">
+		<DefineConstants>EXAMPLE_APP</DefineConstants>
+	</PropertyGroup>
 </Project>

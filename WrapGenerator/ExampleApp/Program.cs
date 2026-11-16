@@ -1,4 +1,5 @@
-﻿using Wrapped.System.IO;
+﻿#if EXAMPLE_APP
+using Wrapped.System.IO;
 
 namespace ExampleApp;
 
@@ -31,3 +32,4 @@ internal class Program
         }
     }
 }
+#endif
