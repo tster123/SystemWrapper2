@@ -32,4 +32,12 @@ internal class Program
         }
     }
 }
+#else
+namespace ExampleApp;
+public class Program
+{
+    public static void Main(string[] args)
+    {
+    }
+}
 #endif
