@@ -2,6 +2,7 @@
   <Folder Name="/Solution Items/">
     <File Path="Build.ps1" />
   </Folder>
+  <Project Path="ExampleApp/ExampleApp.csproj" Id="7bc20237-6aef-4c29-b200-a382a8fa7a51" />
   <Project Path="SystemWrapper2/SystemWrapper2.csproj" />
   <Project Path="WrapCli/WrapCli.csproj" Id="bc4d84ca-16d6-4bf1-be00-78825f9df52b" />
   <Project Path="WrapGenerator/WrapGenerator.csproj" />

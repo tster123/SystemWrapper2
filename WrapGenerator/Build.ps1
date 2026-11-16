@@ -25,7 +25,7 @@ $CsProjTemplate = '
 
   <PropertyGroup>
     <PackageId>SystemWrapper2</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>Tyler Boone</Authors>
   </PropertyGroup>
 
@@ -81,7 +81,7 @@ cd $genDir
 
 if ($PackageNuget)
 {
-	dotnet pack --version 1.0.1
+	dotnet pack --version 1.0.2
 }
 else 
 {
